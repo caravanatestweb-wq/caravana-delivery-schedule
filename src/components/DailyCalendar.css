@@ -1,0 +1,69 @@
+.daily-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.daily-row {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  border-bottom: 1px solid var(--border);
+  min-height: 60px;
+}
+
+.daily-row:last-child {
+  border-bottom: none;
+}
+
+.daily-time-label {
+  padding: 0.75rem 1rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-right: 1px solid var(--border);
+  display: flex;
+  align-items: flex-start;
+  padding-top: 0.75rem;
+}
+
+.daily-slot-content {
+  padding: 0.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.daily-empty-slot {
+  min-height: 40px;
+}
+
+.today-badge {
+  display: inline-block;
+  background: var(--primary);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  margin-left: 0.75rem;
+  vertical-align: middle;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.status-pill {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.status-pill-delivered { background: rgba(76,175,80,0.15); color: var(--status-delivered); }
+.status-pill-scheduled { background: rgba(33,150,243,0.15); color: var(--status-scheduled); }
+.status-pill-reschedule { background: rgba(255,152,0,0.15); color: var(--status-reschedule); }
+.status-pill-contacted { background: rgba(156,39,176,0.15); color: var(--status-contacted); }
