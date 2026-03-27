@@ -6,14 +6,16 @@ const DEFAULT_FORM_STATE = {
   date: new Date().toISOString().split('T')[0],
   timeWindow: '08:00 AM - 10:00 AM',
   source: 'Caravana store',
+  scheduledBy: '',
   clientName: '',
   contactName: '',
   address: '',
   phone: '',
   contactStatus: 'Scheduled',
   invoiceNumber: '',
-  packingList: [], // Array of { id, text, checked }
-  status: 'Scheduled'
+  packingList: [],
+  status: 'Scheduled',
+  notes: ''
 };
 
 
@@ -33,9 +35,16 @@ const STATUSES = [
   'Delivered'
 ];
 
+const HOUR_OPTIONS = [
+  '06:00 AM','07:00 AM','08:00 AM','09:00 AM','10:00 AM','11:00 AM',
+  '12:00 PM','01:00 PM','02:00 PM','03:00 PM','04:00 PM','05:00 PM',
+  '06:00 PM','07:00 PM','08:00 PM'
+];
+
 export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, delivery, timeWindows: externalWindows }) {
   const [formData, setFormData] = useState(DEFAULT_FORM_STATE);
-  const [customTimeWindow, setCustomTimeWindow] = useState('');
+  const [customStart, setCustomStart] = useState(null);
+  const [customEnd, setCustomEnd] = useState(null);
 
   const TIME_WINDOWS = externalWindows && externalWindows.length > 0 ? externalWindows : [
     '08:00 AM - 10:00 AM',
@@ -50,7 +59,6 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, d
   useEffect(() => {
     if (delivery) {
       let parsedPackingList = delivery.packingList || [];
-      // Handle legacy records where packingList was a string
       if (typeof parsedPackingList === 'string') {
         parsedPackingList = parsedPackingList.split('\n').filter(s => s.trim() !== '').map((text, i) => ({
           id: Date.now() + i,
@@ -58,19 +66,21 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, d
           checked: text.toLowerCase().startsWith('[x]')
         }));
       }
-
-      setFormData({
-        ...delivery,
-        packingList: parsedPackingList
-      });
-
+      setFormData({ ...delivery, packingList: parsedPackingList, notes: delivery.notes || '', scheduledBy: delivery.scheduledBy || '' });
       if (!TIME_WINDOWS.includes(delivery.timeWindow)) {
         setFormData(prev => ({ ...prev, timeWindow: 'Custom' }));
-        setCustomTimeWindow(delivery.timeWindow);
+        // parse start/end from stored custom window
+        const parts = delivery.timeWindow.split(' - ');
+        setCustomStart(parts[0] || null);
+        setCustomEnd(parts[1] || null);
+      } else {
+        setCustomStart(null);
+        setCustomEnd(null);
       }
     } else {
       setFormData(DEFAULT_FORM_STATE);
-      setCustomTimeWindow('');
+      setCustomStart(null);
+      setCustomEnd(null);
     }
   }, [delivery, isOpen]);
 
@@ -104,10 +114,15 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, d
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    let finalTimeWindow = formData.timeWindow;
+    if (formData.timeWindow === 'Custom') {
+      if (customStart && customEnd) finalTimeWindow = `${customStart} - ${customEnd}`;
+      else finalTimeWindow = customStart || customEnd || 'Custom';
+    }
     const finalData = {
       ...formData,
       id: formData.id || Date.now().toString(),
-      timeWindow: formData.timeWindow === 'Custom' ? customTimeWindow : formData.timeWindow
+      timeWindow: finalTimeWindow
     };
     onSave(finalData);
   };
@@ -135,23 +150,57 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, d
                 {TIME_WINDOWS.map(w => <option key={w} value={w}>{w}</option>)}
               </select>
               {formData.timeWindow === 'Custom' && (
-                <input 
-                  type="text" 
-                  placeholder="e.g. 09:00 AM - 10:00 AM" 
-                  value={customTimeWindow} 
-                  onChange={(e) => setCustomTimeWindow(e.target.value)} 
-                  className="mt-2"
-                  required
-                />
+                <div style={{ marginTop: '0.5rem' }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-light)', marginBottom: '0.35rem', fontWeight: 600 }}>Select Start Time</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.5rem' }}>
+                    {HOUR_OPTIONS.map(h => (
+                      <button
+                        key={h} type="button"
+                        onClick={() => setCustomStart(h)}
+                        style={{
+                          padding: '0.3rem 0.6rem', fontSize: '0.78rem', borderRadius: '6px',
+                          border: '1px solid var(--border)', cursor: 'pointer', fontFamily: 'inherit',
+                          background: customStart === h ? 'var(--primary)' : 'var(--surface)',
+                          color: customStart === h ? 'white' : 'var(--text-main)', fontWeight: customStart === h ? 700 : 400
+                        }}
+                      >{h}</button>
+                    ))}
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-light)', marginBottom: '0.35rem', fontWeight: 600 }}>Select End Time</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                    {HOUR_OPTIONS.filter(h => !customStart || HOUR_OPTIONS.indexOf(h) > HOUR_OPTIONS.indexOf(customStart)).map(h => (
+                      <button
+                        key={h} type="button"
+                        onClick={() => setCustomEnd(h)}
+                        style={{
+                          padding: '0.3rem 0.6rem', fontSize: '0.78rem', borderRadius: '6px',
+                          border: '1px solid var(--border)', cursor: 'pointer', fontFamily: 'inherit',
+                          background: customEnd === h ? 'var(--primary)' : 'var(--surface)',
+                          color: customEnd === h ? 'white' : 'var(--text-main)', fontWeight: customEnd === h ? 700 : 400
+                        }}
+                      >{h}</button>
+                    ))}
+                  </div>
+                  {customStart && customEnd && (
+                    <div style={{ marginTop: '0.5rem', fontWeight: 700, color: 'var(--primary)', fontSize: '0.9rem' }}>
+                      ✓ {customStart} – {customEnd}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 
-            {/* Row 2: Source and Invoice */}
+            {/* Row 2: Source, Scheduled By, Invoice */}
             <div className="form-group">
               <label>Source</label>
               <select name="source" value={formData.source} onChange={handleChange}>
                 {SOURCES.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
+            </div>
+
+            <div className="form-group">
+              <label>Scheduled By</label>
+              <input type="text" name="scheduledBy" value={formData.scheduledBy} onChange={handleChange} placeholder="Team member name" />
             </div>
 
             <div className="form-group">
@@ -267,6 +316,18 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, d
                   ))}
                 </div>
               )}
+            </div>
+
+            {/* Notes field */}
+            <div className="form-group full-width">
+              <label>Notes</label>
+              <textarea
+                name="notes"
+                value={formData.notes}
+                onChange={handleChange}
+                rows="3"
+                placeholder="Gate code, access instructions, special requests, call ahead, etc."
+              />
             </div>
 
           </div>
