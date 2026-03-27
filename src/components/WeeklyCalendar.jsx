@@ -30,7 +30,7 @@ const isSameDay = (date1, date2) => {
          date1.getDate() === date2.getDate();
 };
 
-export default function WeeklyCalendar({ deliveries, onEditDelivery, filters }) {
+export default function WeeklyCalendar({ deliveries, onEditDelivery, onNewFromSlot }) {
   const [currentWeekStart, setCurrentWeekStart] = useState(getStartOfWeek(new Date()));
 
   const handlePrevWeek = () => {
@@ -50,8 +50,7 @@ export default function WeeklyCalendar({ deliveries, onEditDelivery, filters }) 
   };
 
   const allDays = getDaysOfWeek(currentWeekStart);
-  const allowedDayIndices = filters ? getFilteredDayIndices(filters) : [0,1,2,3,4,5,6];
-  const days = allDays.filter(d => allowedDayIndices.includes(d.getDay()));
+  const days = allDays;
 
   return (
     <div className="calendar-container">
@@ -83,9 +82,14 @@ export default function WeeklyCalendar({ deliveries, onEditDelivery, filters }) 
                 <span className="day-number">{day.getDate()}</span>
               </div>
               
-              <div className="deliveries-list">
+              <div 
+                className="deliveries-list"
+                onClick={() => onNewFromSlot && onNewFromSlot(day)}
+                style={{ cursor: 'pointer' }}
+                title="Click to add delivery"
+              >
                 {dayDeliveries.length === 0 ? (
-                  <div className="no-deliveries">No deliveries</div>
+                  <div className="no-deliveries">+ tap to add</div>
                 ) : (
                   dayDeliveries.map(delivery => (
                     <div 

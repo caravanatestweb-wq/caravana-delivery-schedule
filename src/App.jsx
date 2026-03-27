@@ -3,7 +3,6 @@ import WeeklyCalendar from './components/WeeklyCalendar';
 import MonthlyCalendar from './components/MonthlyCalendar';
 import DailyCalendar from './components/DailyCalendar';
 import DeliveryFormModal from './components/DeliveryFormModal';
-import CalendarFilters, { DEFAULT_FILTERS, buildTimeWindows } from './components/CalendarFilters';
 import './App.css';
 
 function App() {
@@ -11,7 +10,6 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDelivery, setEditingDelivery] = useState(null);
   const [viewMode, setViewMode] = useState('weekly');
-  const [filters, setFilters] = useState(DEFAULT_FILTERS);
 
   // Load from local storage on mount
   useEffect(() => {
@@ -19,34 +17,46 @@ function App() {
     if (saved) {
       try { setDeliveries(JSON.parse(saved)); } catch (e) { console.error(e); }
     }
-    const savedFilters = localStorage.getItem('schedule_filters');
-    if (savedFilters) {
-      try { setFilters(JSON.parse(savedFilters)); } catch (e) {}
-    }
   }, []);
 
   useEffect(() => {
     localStorage.setItem('furniture_deliveries', JSON.stringify(deliveries));
   }, [deliveries]);
 
-  useEffect(() => {
-    localStorage.setItem('schedule_filters', JSON.stringify(filters));
-  }, [filters]);
-
+  // Open blank new delivery form
   const handleOpenNewModal = () => { setEditingDelivery(null); setIsModalOpen(true); };
+
+  // Open form pre-filled with a specific date and optional time window
+  const handleNewFromSlot = (date, timeWindow) => {
+    const dateStr = date.toLocaleDateString('en-CA'); // YYYY-MM-DD format
+    setEditingDelivery({
+      id: null,
+      date: dateStr,
+      timeWindow: timeWindow || '08:00 AM - 10:00 AM',
+      source: 'Caravana store',
+      clientName: '',
+      contactName: '',
+      address: '',
+      phone: '',
+      contactStatus: 'Scheduled',
+      invoiceNumber: '',
+      packingList: [],
+      status: 'Scheduled'
+    });
+    setIsModalOpen(true);
+  };
+
   const handleEditDelivery = (delivery) => { setEditingDelivery(delivery); setIsModalOpen(true); };
   const handleCloseModal = () => { setIsModalOpen(false); setEditingDelivery(null); };
   const handleDeleteDelivery = (id) => { setDeliveries(prev => prev.filter(d => d.id !== id)); handleCloseModal(); };
   const handleSaveDelivery = (deliveryData) => {
-    if (editingDelivery) {
+    if (editingDelivery && editingDelivery.id) {
       setDeliveries(prev => prev.map(d => d.id === deliveryData.id ? deliveryData : d));
     } else {
-      setDeliveries(prev => [...prev, deliveryData]);
+      setDeliveries(prev => [...prev, { ...deliveryData, id: Date.now().toString() }]);
     }
     handleCloseModal();
   };
-
-  const timeWindows = buildTimeWindows(filters);
 
   return (
     <>
@@ -72,28 +82,26 @@ function App() {
           </div>
         </header>
 
-        <CalendarFilters filters={filters} onChange={setFilters} />
-
         <main>
           {viewMode === 'daily' && (
             <DailyCalendar
               deliveries={deliveries}
               onEditDelivery={handleEditDelivery}
-              filters={filters}
+              onNewFromSlot={handleNewFromSlot}
             />
           )}
           {viewMode === 'weekly' && (
             <WeeklyCalendar
               deliveries={deliveries}
               onEditDelivery={handleEditDelivery}
-              filters={filters}
+              onNewFromSlot={handleNewFromSlot}
             />
           )}
           {viewMode === 'monthly' && (
             <MonthlyCalendar
               deliveries={deliveries}
               onEditDelivery={handleEditDelivery}
-              filters={filters}
+              onNewFromSlot={handleNewFromSlot}
             />
           )}
         </main>
@@ -105,7 +113,6 @@ function App() {
         onSave={handleSaveDelivery}
         onDelete={handleDeleteDelivery}
         delivery={editingDelivery}
-        timeWindows={timeWindows}
       />
     </>
   );

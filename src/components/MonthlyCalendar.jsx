@@ -15,7 +15,7 @@ const isSameDay = (date1, date2) => {
          date1.getDate() === date2.getDate();
 };
 
-export default function MonthlyCalendar({ deliveries, onEditDelivery }) {
+export default function MonthlyCalendar({ deliveries, onEditDelivery, onNewFromSlot }) {
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const handlePrevMonth = () => {
@@ -75,7 +75,12 @@ export default function MonthlyCalendar({ deliveries, onEditDelivery }) {
                 <span className="day-number" style={{ fontSize: '1rem' }}>{day.getDate()}</span>
               </div>
               
-              <div className="deliveries-list" style={{ padding: '0.25rem' }}>
+              <div 
+                className="deliveries-list" 
+                style={{ padding: '0.25rem', cursor: 'pointer', minHeight: '60px' }}
+                onClick={() => onNewFromSlot && onNewFromSlot(day)}
+                title="Click to add delivery"
+              >
                 {dayDeliveries.map(delivery => (
                   <div 
                     key={delivery.id} 

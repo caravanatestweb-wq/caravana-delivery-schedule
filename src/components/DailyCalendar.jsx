@@ -9,7 +9,7 @@ const isSameDay = (date1, date2) => {
     date1.getDate() === date2.getDate();
 };
 
-export default function DailyCalendar({ deliveries, onEditDelivery, filters }) {
+export default function DailyCalendar({ deliveries, onEditDelivery, onNewFromSlot }) {
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const handlePrevDay = () => {
@@ -28,9 +28,7 @@ export default function DailyCalendar({ deliveries, onEditDelivery, filters }) {
 
   const dayDeliveries = deliveries.filter(d => isSameDay(new Date(d.date), currentDate));
 
-  const TIME_SLOTS = filters
-    ? getFilteredHours(filters)
-    : ['08:00 AM','09:00 AM','10:00 AM','11:00 AM','12:00 PM','01:00 PM','02:00 PM','03:00 PM','04:00 PM','05:00 PM','06:00 PM'];
+  const TIME_SLOTS = ['08:00 AM','09:00 AM','10:00 AM','11:00 AM','12:00 PM','01:00 PM','02:00 PM','03:00 PM','04:00 PM','05:00 PM','06:00 PM'];
 
   const getSlotDeliveries = (slot) => {
     return dayDeliveries.filter(d => {
@@ -69,7 +67,16 @@ export default function DailyCalendar({ deliveries, onEditDelivery, filters }) {
               <div className="daily-time-label">{slot}</div>
               <div className="daily-slot-content">
                 {slotDeliveries.length === 0 ? (
-                  <div className="daily-empty-slot"></div>
+                  <div 
+                    className="daily-empty-slot"
+                    onClick={() => onNewFromSlot && onNewFromSlot(currentDate, slot + ' - ' + (TIME_SLOTS[TIME_SLOTS.indexOf(slot) + 1] || slot))}
+                    style={{ cursor: 'pointer', borderRadius: '4px', transition: 'background 0.2s' }}
+                    title={`Add delivery at ${slot}`}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--primary-light)'}
+                    onMouseLeave={e => e.currentTarget.style.background = ''}
+                  >
+                    <span style={{ opacity: 0.3, fontSize: '0.8rem' }}>+ add delivery</span>
+                  </div>
                 ) : (
                   slotDeliveries.map(delivery => (
                     <div
