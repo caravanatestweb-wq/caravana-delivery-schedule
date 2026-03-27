@@ -20,9 +20,11 @@ const getDaysOfWeek = (startDate) => {
 };
 
 const isSameDay = (date1, date2) => {
-  return date1.getFullYear() === date2.getFullYear() &&
-         date1.getMonth() === date2.getMonth() &&
-         date1.getDate() === date2.getDate();
+  // date1 is a Date object, date2 is a Date object
+  // Compare using their ISO string parts (YYYY-MM-DD)
+  const d1 = date1.toLocaleDateString('en-CA');
+  const d2 = date2.toLocaleDateString('en-CA');
+  return d1 === d2;
 };
 
 export default function WeeklyCalendar({ deliveries, currentDate, onEditDelivery, onNewFromSlot }) {
@@ -33,7 +35,8 @@ export default function WeeklyCalendar({ deliveries, currentDate, onEditDelivery
     <div className="calendar-container">
       <div className="calendar-grid">
         {days.map((day, index) => {
-          const dayDeliveries = deliveries.filter(d => isSameDay(new Date(d.date), day));
+          const dayStr = day.toLocaleDateString('en-CA');
+          const dayDeliveries = deliveries.filter(d => d.date === dayStr);
           const isToday = isSameDay(day, new Date());
           return (
             <div key={index} className={`calendar-day ${isToday ? 'is-today' : ''}`}>
@@ -55,10 +58,19 @@ export default function WeeklyCalendar({ deliveries, currentDate, onEditDelivery
                       key={delivery.id}
                       className={`delivery-card status-${(delivery.status || 'scheduled').toLowerCase()}`}
                       onClick={(e) => { e.stopPropagation(); onEditDelivery(delivery); }}
+                      title="Click to edit delivery"
                     >
                       <div className="delivery-time">{delivery.timeWindow}</div>
                       <div className="delivery-client">{delivery.clientName}</div>
-                      <div className="delivery-source">{delivery.source}</div>
+                      <div className="delivery-source">
+                        {delivery.source}
+                        {delivery.scheduledBy && <span style={{ opacity: 0.7, fontSize: '0.7rem', marginLeft: '0.4rem' }}>• by {delivery.scheduledBy}</span>}
+                      </div>
+                      {delivery.notes && (
+                        <div style={{ marginTop: '0.35rem', fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 600 }}>
+                          📝 has notes
+                        </div>
+                      )}
                     </div>
                   ))
                 )}

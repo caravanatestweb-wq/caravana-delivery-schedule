@@ -3,9 +3,9 @@ import './WeeklyCalendar.css';
 import './DailyCalendar.css';
 
 const isSameDay = (date1, date2) => {
-  return date1.getFullYear() === date2.getFullYear() &&
-    date1.getMonth() === date2.getMonth() &&
-    date1.getDate() === date2.getDate();
+  const d1 = date1.toLocaleDateString('en-CA');
+  const d2 = date2.toLocaleDateString('en-CA');
+  return d1 === d2;
 };
 
 const TIME_SLOTS = [
@@ -20,7 +20,8 @@ export default function DailyCalendar({ deliveries, currentDate, onEditDelivery,
   const [isDragging, setIsDragging] = useState(false);
   const isMouseDownRef = useRef(false);
 
-  const dayDeliveries = deliveries.filter(d => isSameDay(new Date(d.date), currentDate));
+  const dayStr = currentDate.toLocaleDateString('en-CA');
+  const dayDeliveries = deliveries.filter(d => d.date === dayStr);
 
   const getSlotDeliveries = (slot) => {
     return dayDeliveries.filter(d => {
@@ -119,11 +120,17 @@ export default function DailyCalendar({ deliveries, currentDate, onEditDelivery,
                     >
                       <div className="delivery-time">{delivery.timeWindow}</div>
                       <div className="delivery-client" style={{ fontSize: '1rem', fontWeight: 600 }}>{delivery.clientName}</div>
-                      <div className="delivery-source">{delivery.source} &bull; {delivery.address}</div>
-                      <div style={{ marginTop: '0.25rem', fontSize: '0.8rem', color: 'var(--text-light)' }}>
-                        📞 {delivery.phone}
+                      <div className="delivery-source">
+                        {delivery.source} • {delivery.address}
+                        {delivery.scheduledBy && <span style={{ opacity: 0.7, fontSize: '0.8rem', marginLeft: '0.5rem' }}>• by {delivery.scheduledBy}</span>}
+                      </div>
+                      <div style={{ marginTop: '0.25rem', fontSize: '0.8rem', color: 'var(--text-light)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span>📞 {delivery.phone}</span>
                         {delivery.status && (
-                          <span className={`status-pill status-pill-${delivery.status.toLowerCase()}`} style={{ marginLeft: '0.5rem' }}>{delivery.status}</span>
+                          <span className={`status-pill status-pill-${delivery.status.toLowerCase()}`}>{delivery.status}</span>
+                        )}
+                        {delivery.notes && (
+                          <span style={{ color: 'var(--primary)', fontWeight: 700 }}>📝 Has Notes</span>
                         )}
                       </div>
                     </div>

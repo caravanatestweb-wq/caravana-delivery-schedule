@@ -5,9 +5,9 @@ const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
 const getFirstDayOfMonth = (year, month) => new Date(year, month, 1).getDay();
 
 const isSameDay = (date1, date2) => {
-  return date1.getFullYear() === date2.getFullYear() &&
-         date1.getMonth() === date2.getMonth() &&
-         date1.getDate() === date2.getDate();
+  const d1 = date1.toLocaleDateString('en-CA');
+  const d2 = date2.toLocaleDateString('en-CA');
+  return d1 === d2;
 };
 
 export default function MonthlyCalendar({ deliveries, currentDate, onEditDelivery, onNewFromSlot }) {
@@ -31,7 +31,8 @@ export default function MonthlyCalendar({ deliveries, currentDate, onEditDeliver
 
         {totalSlots.map((day, index) => {
           if (!day) return <div key={`blank-${index}`} className="calendar-day" style={{ visibility: 'hidden', minHeight: '120px' }} />;
-          const dayDeliveries = deliveries.filter(d => isSameDay(new Date(d.date), day));
+          const dayStr = day.toLocaleDateString('en-CA');
+          const dayDeliveries = deliveries.filter(d => d.date === dayStr);
           const isToday = isSameDay(day, new Date());
           return (
             <div key={index} className={`calendar-day ${isToday ? 'is-today' : ''}`} style={{ minHeight: '130px' }}>
@@ -51,7 +52,10 @@ export default function MonthlyCalendar({ deliveries, currentDate, onEditDeliver
                     onClick={(e) => { e.stopPropagation(); onEditDelivery(delivery); }}
                     style={{ padding: '0.25rem 0.5rem', marginBottom: '0.25rem', cursor: 'pointer', fontSize: '0.75rem' }}
                   >
-                    <div style={{ fontWeight: 'bold' }}>{delivery.clientName}</div>
+                    <div style={{ fontWeight: 'bold' }}>
+                      {delivery.clientName}
+                      {delivery.notes && <span title="Has notes" style={{ marginLeft: '4px' }}>📝</span>}
+                    </div>
                   </div>
                 ))}
               </div>
