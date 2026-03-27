@@ -62,7 +62,7 @@ export default function WeeklyCalendar({ deliveries, onEditDelivery, filters }) 
           <button className="btn-icon" onClick={handleNextWeek}>&rarr;</button>
         </div>
         <h2 className="week-title">
-          {days[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {days[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+          {days[0]?.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {days[days.length - 1]?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
         </h2>
       </div>
 
