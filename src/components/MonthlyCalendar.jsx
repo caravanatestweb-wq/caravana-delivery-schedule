@@ -4,10 +4,12 @@ import './WeeklyCalendar.css';
 const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
 const getFirstDayOfMonth = (year, month) => new Date(year, month, 1).getDay();
 
+const getLocalDateString = (date = new Date()) => {
+  return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+};
+
 const isSameDay = (date1, date2) => {
-  const d1 = date1.toLocaleDateString('en-CA');
-  const d2 = date2.toLocaleDateString('en-CA');
-  return d1 === d2;
+  return getLocalDateString(date1) === getLocalDateString(date2);
 };
 
 export default function MonthlyCalendar({ deliveries, currentDate, onEditDelivery, onNewFromSlot }) {
@@ -31,7 +33,7 @@ export default function MonthlyCalendar({ deliveries, currentDate, onEditDeliver
 
         {totalSlots.map((day, index) => {
           if (!day) return <div key={`blank-${index}`} className="calendar-day" style={{ visibility: 'hidden', minHeight: '120px' }} />;
-          const dayStr = day.toLocaleDateString('en-CA');
+          const dayStr = getLocalDateString(day);
           const dayDeliveries = deliveries.filter(d => d.date === dayStr);
           const isToday = isSameDay(day, new Date());
           return (

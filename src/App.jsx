@@ -73,6 +73,10 @@ const isToday = (date, viewMode) => {
   return date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
 };
 
+const getLocalDateString = (date = new Date()) => {
+  return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+};
+
 function App() {
   const [deliveries, setDeliveries] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -93,11 +97,11 @@ function App() {
 
   const handleOpenNewModal = () => { setEditingDelivery(null); setIsModalOpen(true); };
   const handleNewFromSlot = (date, timeWindow) => {
-    const dateStr = date.toLocaleDateString('en-CA');
+    const dateStr = getLocalDateString(date);
     setEditingDelivery({
       id: null, date: dateStr, timeWindow: timeWindow || '08:00 AM - 10:00 AM',
-      source: 'Caravana store', clientName: '', contactName: '', address: '',
-      phone: '', contactStatus: 'Scheduled', invoiceNumber: '', packingList: [], status: 'Scheduled'
+      source: 'Caravana store', scheduledBy: '', clientName: '', contactName: '', address: '',
+      phone: '', contactStatus: 'Scheduled', invoiceNumber: '', packingList: [], status: 'Scheduled', notes: ''
     });
     setIsModalOpen(true);
   };
@@ -217,6 +221,7 @@ function App() {
         onSave={handleSaveDelivery}
         onDelete={handleDeleteDelivery}
         delivery={editingDelivery}
+        allDeliveries={deliveries}
       />
     </>
   );

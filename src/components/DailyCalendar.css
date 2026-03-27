@@ -1,69 +1,135 @@
-.daily-grid {
+.daily-calendar-wrapper {
+  display: flex;
+  gap: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.daily-time-column {
   display: flex;
   flex-direction: column;
-  gap: 0;
 }
 
-.daily-row {
-  display: grid;
-  grid-template-columns: 100px 1fr;
-  border-bottom: 1px solid var(--border);
-  min-height: 60px;
+.daily-time-label-slot {
+  height: 80px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-light);
+  display: flex;
+  align-items: flex-start;
+  padding-top: 0;
+  width: 80px;
 }
 
-.daily-row:last-child {
+.daily-grid-content {
+  flex: 1;
+  border-left: 1px solid var(--border);
+  position: relative;
+}
+
+.daily-grid-slot {
+  height: 80px;
+  border-bottom: 1px solid var(--border-light);
+  transition: var(--transition);
+  cursor: ns-resize;
+  position: relative;
+}
+
+.daily-grid-slot:last-child {
   border-bottom: none;
 }
 
-.daily-time-label {
-  padding: 0.75rem 1rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-light);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-right: 1px solid var(--border);
-  display: flex;
-  align-items: flex-start;
-  padding-top: 0.75rem;
+.daily-grid-slot.highlighted {
+  background: rgba(180, 140, 80, 0.15);
 }
 
-.daily-slot-content {
-  padding: 0.5rem 1rem;
+.slot-hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.75rem;
+  color: var(--text-light);
+  opacity: 0;
+  pointer-events: none;
+  transition: var(--transition);
+}
+
+.daily-grid-slot:hover .slot-hint {
+  opacity: 0.2;
+}
+
+/* Delivery Block Styles */
+.delivery-block {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-sm);
+  border-left: 4px solid var(--primary);
+  background: var(--bg-color);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: var(--transition);
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  justify-content: center;
 }
 
-.daily-empty-slot {
-  min-height: 40px;
+.delivery-block:hover {
+  transform: scale(1.01);
+  box-shadow: var(--shadow-md);
+  z-index: 10 !important;
 }
 
-.today-badge {
-  display: inline-block;
-  background: var(--primary);
-  color: white;
-  font-size: 0.7rem;
+.delivery-block-time {
+  font-size: 0.75rem;
   font-weight: 700;
-  padding: 0.2rem 0.6rem;
-  border-radius: 999px;
-  margin-left: 0.75rem;
-  vertical-align: middle;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  color: var(--primary);
+  margin-bottom: 0.25rem;
 }
 
-.status-pill {
-  display: inline-block;
-  font-size: 0.72rem;
+.delivery-block-client {
+  font-size: 1rem;
   font-weight: 600;
-  padding: 0.1rem 0.5rem;
-  border-radius: 999px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  color: var(--text-main);
+  margin-bottom: 0.25rem;
 }
 
-.status-pill-delivered { background: rgba(76,175,80,0.15); color: var(--status-delivered); }
-.status-pill-scheduled { background: rgba(33,150,243,0.15); color: var(--status-scheduled); }
-.status-pill-reschedule { background: rgba(255,152,0,0.15); color: var(--status-reschedule); }
-.status-pill-contacted { background: rgba(156,39,176,0.15); color: var(--status-contacted); }
+.delivery-block-meta {
+  font-size: 0.8rem;
+  color: var(--text-light);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 0.5rem;
+}
+
+.delivery-block-bottom {
+  margin-top: auto;
+  font-size: 0.75rem;
+  color: var(--text-light);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.scheduled-by-tag {
+  background: var(--surface-hover);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.notes-tag {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+/* Status variants for blocks */
+.delivery-block.status-delivered { border-left-color: #10b981; }
+.delivery-block.status-reschedule { border-left-color: #f59e0b; }
+.delivery-block.status-contacted { border-left-color: #3b82f6; }

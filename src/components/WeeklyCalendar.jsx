@@ -1,6 +1,10 @@
 import React from 'react';
 import './WeeklyCalendar.css';
 
+const getLocalDateString = (date = new Date()) => {
+  return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+};
+
 const getStartOfWeek = (date) => {
   const d = new Date(date);
   const day = d.getDay();
@@ -20,11 +24,7 @@ const getDaysOfWeek = (startDate) => {
 };
 
 const isSameDay = (date1, date2) => {
-  // date1 is a Date object, date2 is a Date object
-  // Compare using their ISO string parts (YYYY-MM-DD)
-  const d1 = date1.toLocaleDateString('en-CA');
-  const d2 = date2.toLocaleDateString('en-CA');
-  return d1 === d2;
+  return getLocalDateString(date1) === getLocalDateString(date2);
 };
 
 export default function WeeklyCalendar({ deliveries, currentDate, onEditDelivery, onNewFromSlot }) {
@@ -35,7 +35,7 @@ export default function WeeklyCalendar({ deliveries, currentDate, onEditDelivery
     <div className="calendar-container">
       <div className="calendar-grid">
         {days.map((day, index) => {
-          const dayStr = day.toLocaleDateString('en-CA');
+          const dayStr = getLocalDateString(day);
           const dayDeliveries = deliveries.filter(d => d.date === dayStr);
           const isToday = isSameDay(day, new Date());
           return (

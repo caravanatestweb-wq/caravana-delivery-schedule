@@ -2,17 +2,33 @@ import React, { useState, useRef } from 'react';
 import './WeeklyCalendar.css';
 import './DailyCalendar.css';
 
-const isSameDay = (date1, date2) => {
-  const d1 = date1.toLocaleDateString('en-CA');
-  const d2 = date2.toLocaleDateString('en-CA');
-  return d1 === d2;
-};
-
 const TIME_SLOTS = [
   '08:00 AM','09:00 AM','10:00 AM','11:00 AM',
   '12:00 PM','01:00 PM','02:00 PM','03:00 PM',
   '04:00 PM','05:00 PM','06:00 PM'
 ];
+
+// Helper to calculate grid-row indices based on timeWindow
+const getTimeWindowRange = (timeWindow) => {
+  if (!timeWindow) return null;
+  const match = timeWindow.match(/(\d{2}:\d{2} [AP]M) - (\d{2}:\d{2} [AP]M)/);
+  if (!match) return null;
+  const startStr = match[1];
+  const endStr = match[2];
+  
+  const startIdx = TIME_SLOTS.indexOf(startStr);
+  let endIdx = TIME_SLOTS.indexOf(endStr);
+  
+  // If end time is not exactly in our 1-hour slot markers, we try to find its position
+  // for simplicity in this grid, if it's "12:00 PM", it marks the *start* of that slot hour.
+  // So a 10:00 AM - 12:00 PM spans 10:00 and 11:00 slots. It stops BEFORE the 12:00 label.
+  
+  if (startIdx === -1) return null;
+  // If endIdx is -1 (e.g. 06:30 PM) or after 06:00 PM, we use the end of the grid (13)
+  if (endIdx === -1) endIdx = TIME_SLOTS.length; 
+  
+  return { start: startIdx + 1, end: endIdx + 1 };
+};
 
 export default function DailyCalendar({ deliveries, currentDate, onEditDelivery, onNewFromSlot }) {
   const [dragStart, setDragStart] = useState(null);
@@ -20,23 +36,8 @@ export default function DailyCalendar({ deliveries, currentDate, onEditDelivery,
   const [isDragging, setIsDragging] = useState(false);
   const isMouseDownRef = useRef(false);
 
-  const dayStr = currentDate.toLocaleDateString('en-CA');
+  const dayStr = currentDate.getFullYear() + '-' + String(currentDate.getMonth() + 1).padStart(2, '0') + '-' + String(currentDate.getDate()).padStart(2, '0');
   const dayDeliveries = deliveries.filter(d => d.date === dayStr);
-
-  const getSlotDeliveries = (slot) => {
-    return dayDeliveries.filter(d => {
-      const w = d.timeWindow || '';
-      return w.startsWith(slot) || w.includes(slot);
-    });
-  };
-
-  const isInDragRange = (slot) => {
-    if (!dragStart || !dragEnd) return false;
-    const si = TIME_SLOTS.indexOf(dragStart);
-    const ei = TIME_SLOTS.indexOf(dragEnd);
-    const ci = TIME_SLOTS.indexOf(slot);
-    return ci >= Math.min(si, ei) && ci <= Math.max(si, ei);
-  };
 
   const handleMouseDown = (slot) => {
     isMouseDownRef.current = true;
@@ -74,6 +75,14 @@ export default function DailyCalendar({ deliveries, currentDate, onEditDelivery,
     }
   };
 
+  const isInDragRange = (slot) => {
+    if (!dragStart || !dragEnd) return false;
+    const si = TIME_SLOTS.indexOf(dragStart);
+    const ei = TIME_SLOTS.indexOf(dragEnd);
+    const ci = TIME_SLOTS.indexOf(slot);
+    return ci >= Math.min(si, ei) && ci <= Math.max(si, ei);
+  };
+
   return (
     <div className="calendar-container">
       {isDragging && (
@@ -82,82 +91,74 @@ export default function DailyCalendar({ deliveries, currentDate, onEditDelivery,
         </div>
       )}
 
-      {dayDeliveries.length === 0 && !isDragging && (
-        <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-light)', fontSize: '0.85rem' }}>
-          Click and drag across time slots below to schedule a delivery
+      <div className="daily-calendar-wrapper" style={{ position: 'relative' }}>
+        {/* Time Labels Column */}
+        <div className="daily-time-column">
+          {TIME_SLOTS.map(slot => (
+            <div key={slot} className="daily-time-label-slot">{slot}</div>
+          ))}
         </div>
-      )}
 
-      <div className="daily-grid" onMouseLeave={handleGridMouseLeave}>
-        {TIME_SLOTS.map((slot) => {
-          const slotDeliveries = getSlotDeliveries(slot);
-          const highlighted = isInDragRange(slot);
-          return (
-            <div
-              key={slot}
-              className="daily-row"
-              style={{ background: highlighted ? 'rgba(180,140,80,0.12)' : '', transition: 'background 0.1s', userSelect: 'none' }}
-              onMouseDown={() => handleMouseDown(slot)}
-              onMouseEnter={() => handleMouseEnter(slot)}
-              onMouseUp={() => handleMouseUp(slot)}
-            >
-              <div className="daily-time-label" style={{ color: highlighted ? 'var(--primary)' : '' }}>
-                {slot}
-              </div>
-              <div className="daily-slot-content">
-                {slotDeliveries.length === 0 ? (
-                  <div className="daily-empty-slot" style={{ cursor: 'ns-resize' }}>
-                    {!isDragging && <span style={{ opacity: 0.2, fontSize: '0.75rem', pointerEvents: 'none' }}>drag to select</span>}
-                  </div>
-                ) : (
-                  slotDeliveries.map(delivery => (
-                    <div
-                      key={delivery.id}
-                      className={`delivery-card status-${(delivery.status || 'scheduled').toLowerCase()}`}
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onClick={() => onEditDelivery(delivery)}
-                      style={{ marginBottom: '0.5rem', cursor: 'pointer' }}
-                    >
-                      <div className="delivery-time">{delivery.timeWindow}</div>
-                      <div className="delivery-client" style={{ fontSize: '1rem', fontWeight: 600 }}>{delivery.clientName}</div>
-                      <div className="delivery-source">
-                        {delivery.source} • {delivery.address}
-                        {delivery.scheduledBy && <span style={{ opacity: 0.7, fontSize: '0.8rem', marginLeft: '0.5rem' }}>• by {delivery.scheduledBy}</span>}
-                      </div>
-                      <div style={{ marginTop: '0.25rem', fontSize: '0.8rem', color: 'var(--text-light)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span>📞 {delivery.phone}</span>
-                        {delivery.status && (
-                          <span className={`status-pill status-pill-${delivery.status.toLowerCase()}`}>{delivery.status}</span>
-                        )}
-                        {delivery.notes && (
-                          <span style={{ color: 'var(--primary)', fontWeight: 700 }}>📝 Has Notes</span>
-                        )}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          );
-        })}
+        {/* The Grid / Content Area */}
+        <div 
+          className="daily-grid-content" 
+          onMouseLeave={handleGridMouseLeave}
+          style={{ 
+            display: 'grid', 
+            gridTemplateRows: `repeat(${TIME_SLOTS.length}, 80px)`,
+            position: 'relative' 
+          }}
+        >
+          {/* Background Drop Zones (for drag-to-select) */}
+          {TIME_SLOTS.map((slot, idx) => {
+             const highlighted = isInDragRange(slot);
+             return (
+               <div 
+                 key={slot} 
+                 className={`daily-grid-slot ${highlighted ? 'highlighted' : ''}`}
+                 onMouseDown={() => handleMouseDown(slot)}
+                 onMouseEnter={() => handleMouseEnter(slot)}
+                 onMouseUp={() => handleMouseUp(slot)}
+               >
+                 {!isDragging && <div className="slot-hint">drag to select</div>}
+               </div>
+             );
+          })}
 
-        {(() => {
-          const unmatched = dayDeliveries.filter(d => !TIME_SLOTS.some(s => (d.timeWindow || '').startsWith(s) || (d.timeWindow || '').includes(s)));
-          if (!unmatched.length) return null;
-          return (
-            <div className="daily-row">
-              <div className="daily-time-label" style={{ color: 'var(--primary)' }}>All Day</div>
-              <div className="daily-slot-content">
-                {unmatched.map(delivery => (
-                  <div key={delivery.id} className={`delivery-card status-${(delivery.status || 'scheduled').toLowerCase()}`} onClick={() => onEditDelivery(delivery)} style={{ cursor: 'pointer' }}>
-                    <div className="delivery-time">{delivery.timeWindow}</div>
-                    <div className="delivery-client" style={{ fontSize: '1rem', fontWeight: 600 }}>{delivery.clientName}</div>
+          {/* Actual Deliveries (positioned blocks) */}
+          {dayDeliveries.map(delivery => {
+            const range = getTimeWindowRange(delivery.timeWindow);
+            if (!range) return null;
+            
+            // To prevent overlap issues in this simple view, we can use grid-column if multiple exist,
+            // but for now let's just render them as blocks.
+            return (
+              <div 
+                key={delivery.id} 
+                className={`delivery-block status-${(delivery.status || 'scheduled').toLowerCase()}`}
+                style={{ 
+                  gridRowStart: range.start,
+                  gridRowEnd: range.end,
+                  zIndex: 5
+                }}
+                onClick={() => onEditDelivery(delivery)}
+              >
+                <div className="delivery-block-content">
+                  <div className="delivery-block-time">{delivery.timeWindow}</div>
+                  <div className="delivery-block-client">{delivery.clientName}</div>
+                  <div className="delivery-block-meta">
+                    {delivery.source} • {delivery.address}
                   </div>
-                ))}
+                  <div className="delivery-block-bottom">
+                    📞 {delivery.phone}
+                    {delivery.scheduledBy && <span className="scheduled-by-tag">by {delivery.scheduledBy}</span>}
+                    {delivery.notes && <span className="notes-tag">📝 notes</span>}
+                  </div>
+                </div>
               </div>
-            </div>
-          );
-        })()}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
