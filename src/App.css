@@ -66,3 +66,115 @@
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
 }
+
+/* ── Unified Calendar Nav Bar ── */
+.cal-nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: 1rem;
+  box-shadow: var(--shadow-sm);
+}
+
+/* View tabs: Day | Week | Month */
+.cal-view-tabs {
+  display: flex;
+  background: var(--bg-color);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.cal-tab {
+  padding: 0.45rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-light);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: inherit;
+}
+
+.cal-tab:hover {
+  color: var(--primary);
+  background: var(--surface-hover);
+}
+
+.cal-tab.active {
+  background: var(--primary);
+  color: white;
+}
+
+/* Date picker group */
+.cal-date-picker {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.cal-nav-arrow {
+  font-size: 1.3rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-light);
+  transition: var(--transition);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.cal-nav-arrow:hover {
+  background: var(--surface-hover);
+  color: var(--primary);
+}
+
+.cal-date-select {
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-color);
+  color: var(--text-main);
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: inherit;
+  min-width: 220px;
+  text-align: center;
+  cursor: pointer;
+}
+
+/* Today button */
+.cal-today-btn {
+  padding: 0.45rem 1.1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--primary);
+  background: transparent;
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.cal-today-btn:hover:not(:disabled) {
+  background: var(--primary);
+  color: white;
+}
+
+.cal-today-btn.at-today {
+  opacity: 0.4;
+  cursor: default;
+  border-color: var(--border);
+  color: var(--text-light);
+}
