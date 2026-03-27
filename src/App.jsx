@@ -172,13 +172,13 @@ function App() {
             <button className="btn-icon cal-nav-arrow" onClick={handleNext}>›</button>
           </div>
 
-          {/* RIGHT: Today button */}
+          {/* RIGHT: Today / This Week / This Month button */}
           <button
             className={`cal-today-btn ${atToday ? 'at-today' : ''}`}
             onClick={handleGoToday}
             disabled={atToday}
           >
-            Today
+            {viewMode === 'daily' ? 'Today' : viewMode === 'weekly' ? 'This Week' : 'This Month'}
           </button>
         </div>
 
