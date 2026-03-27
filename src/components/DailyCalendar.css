@@ -28,6 +28,8 @@
   flex: 1;
   border-left: 1px solid var(--border);
   position: relative;
+  /* Ensure the grid height matches the total slot height */
+  height: 880px; /* 11 slots * 80px */
 }
 
 .daily-grid-slot {
@@ -65,42 +67,49 @@
 /* Delivery Block Styles */
 .delivery-block {
   position: absolute;
-  left: 4px;
-  right: 4px;
-  padding: 0.5rem 0.75rem;
+  left: 10px;
+  right: 10px;
+  padding: 0.75rem 1rem;
   border-radius: var(--radius-sm);
-  border-left: 4px solid var(--primary);
-  background: var(--bg-color);
-  box-shadow: var(--shadow-sm);
+  border-left: 5px solid var(--primary);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
   cursor: pointer;
   transition: var(--transition);
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  z-index: 5;
 }
 
 .delivery-block:hover {
-  transform: scale(1.01);
-  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
   z-index: 10 !important;
 }
 
+.delivery-block-content {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
 .delivery-block-time {
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-size: 0.8rem;
+  font-weight: 800;
   color: var(--primary);
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.35rem;
 }
 
 .delivery-block-client {
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: 1.1rem;
+  font-weight: 700;
   color: var(--text-main);
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.35rem;
 }
 
 .delivery-block-meta {
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   color: var(--text-light);
   white-space: nowrap;
   overflow: hidden;
@@ -110,26 +119,41 @@
 
 .delivery-block-bottom {
   margin-top: auto;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   color: var(--text-light);
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 1rem;
   flex-wrap: wrap;
 }
 
 .scheduled-by-tag {
   background: var(--surface-hover);
-  padding: 1px 6px;
+  padding: 2px 8px;
   border-radius: 4px;
+  font-size: 0.75rem;
 }
 
 .notes-tag {
   color: var(--primary);
   font-weight: 700;
+  font-size: 0.75rem;
 }
 
-/* Status variants for blocks */
+/* Drag Notification */
+.drag-notification {
+  text-align: center;
+  padding: 0.5rem;
+  background: var(--primary);
+  color: white;
+  border-radius: var(--radius-sm);
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Status variants */
 .delivery-block.status-delivered { border-left-color: #10b981; }
 .delivery-block.status-reschedule { border-left-color: #f59e0b; }
 .delivery-block.status-contacted { border-left-color: #3b82f6; }

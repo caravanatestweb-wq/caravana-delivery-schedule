@@ -5,6 +5,18 @@ const getLocalDateString = (date = new Date()) => {
   return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
 };
 
+const timeToMinutes = (timeStr) => {
+  if (!timeStr) return 0;
+  const match = timeStr.match(/(\d{2}):(\d{2}) ([AP]M)/);
+  if (!match) return 0;
+  let [_, hours, minutes, ampm] = match;
+  hours = parseInt(hours);
+  minutes = parseInt(minutes);
+  if (ampm === 'PM' && hours < 12) hours += 12;
+  if (ampm === 'AM' && hours === 12) hours = 0;
+  return hours * 60 + minutes;
+};
+
 const DEFAULT_FORM_STATE = {
   id: null,
   date: getLocalDateString(),
@@ -72,12 +84,27 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, d
   if (!isOpen) return null;
 
   // Conflict prevention: Get busy times for the selected date (excluding current editing delivery)
-  const busyTimes = allDeliveries
+  const busyRanges = allDeliveries
     .filter(d => d.date === formData.date && d.id !== formData.id)
-    .map(d => d.timeWindow);
+    .map(d => {
+      const parts = d.timeWindow.split(' - ');
+      return { start: timeToMinutes(parts[0]), end: timeToMinutes(parts[1] || parts[0]) };
+    });
 
-  const isTimeOverlap = (time) => {
-    return busyTimes.some(bt => bt.includes(time));
+  const isTimeBusy = (timeStr) => {
+    const mins = timeToMinutes(timeStr);
+    return busyRanges.some(range => mins >= range.start && mins < range.end);
+  };
+
+  const isWindowBusy = (windowStr) => {
+    if (windowStr === 'Custom') return false;
+    const parts = windowStr.split(' - ');
+    const start = timeToMinutes(parts[0]);
+    const end = timeToMinutes(parts[1] || parts[0]);
+    // Check if this window overlaps with any busy range
+    return busyRanges.some(range => {
+      return (start < range.end && end > range.start);
+    });
   };
 
   const handleChange = (e) => {
@@ -144,11 +171,14 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, d
                   <div className="form-group">
                     <label>Time Window</label>
                     <select name="timeWindow" value={formData.timeWindow} onChange={handleChange}>
-                      {TIME_WINDOWS.map(w => (
-                        <option key={w} value={w} disabled={w !== 'Custom' && busyTimes.includes(w)}>
-                          {w} {busyTimes.includes(w) ? ' (Already Scheduled)' : ''}
-                        </option>
-                      ))}
+                      {TIME_WINDOWS.map(w => {
+                        const busy = isWindowBusy(w);
+                        return (
+                          <option key={w} value={w} disabled={w !== 'Custom' && busy}>
+                            {w} {busy ? ' (ALREADY SCHEDULED)' : ''}
+                          </option>
+                        );
+                      })}
                     </select>
                   </div>
                 </div>
@@ -161,21 +191,25 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, d
                         <button 
                           key={h} type="button" 
                           className={`hour-pill ${customStart === h ? 'active' : ''}`}
-                          disabled={isTimeOverlap(h)}
+                          disabled={isTimeBusy(h)}
                           onClick={() => setCustomStart(h)}
                         >{h}</button>
                       ))}
                     </div>
                     <label style={{ fontSize: '0.75rem', marginTop: '0.75rem', display: 'block' }}>Pick End Hour</label>
                     <div className="hour-pill-grid">
-                      {HOUR_OPTIONS.filter(h => !customStart || HOUR_OPTIONS.indexOf(h) > HOUR_OPTIONS.indexOf(customStart)).map(h => (
-                        <button 
-                          key={h} type="button" 
-                          className={`hour-pill ${customEnd === h ? 'active' : ''}`}
-                          disabled={isTimeOverlap(h)}
-                          onClick={() => setCustomEnd(h)}
-                        >{h}</button>
-                      ))}
+                      {HOUR_OPTIONS.filter(h => !customStart || HOUR_OPTIONS.indexOf(h) > HOUR_OPTIONS.indexOf(customStart)).map(h => {
+                         // End hour is busy if it falls INSIDE a busy range. 
+                         // Note: End hour can be the START of a busy range, but not the middle.
+                         return (
+                           <button 
+                             key={h} type="button" 
+                             className={`hour-pill ${customEnd === h ? 'active' : ''}`}
+                             disabled={isTimeBusy(h) && !busyRanges.some(r => timeToMinutes(h) === r.start)}
+                             onClick={() => setCustomEnd(h)}
+                           >{h}</button>
+                         );
+                      })}
                     </div>
                   </div>
                 )}

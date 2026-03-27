@@ -8,26 +8,22 @@ const TIME_SLOTS = [
   '04:00 PM','05:00 PM','06:00 PM'
 ];
 
-// Helper to calculate grid-row indices based on timeWindow
-const getTimeWindowRange = (timeWindow) => {
+const SLOT_HEIGHT = 80;
+
+const getTimeWindowIndices = (timeWindow) => {
   if (!timeWindow) return null;
   const match = timeWindow.match(/(\d{2}:\d{2} [AP]M) - (\d{2}:\d{2} [AP]M)/);
-  if (!match) return null;
+  if (!match) {
+    if (timeWindow === 'Full Day (08:00 AM - 06:00 PM)') return { start: 0, end: 10 };
+    return null;
+  }
   const startStr = match[1];
   const endStr = match[2];
-  
   const startIdx = TIME_SLOTS.indexOf(startStr);
   let endIdx = TIME_SLOTS.indexOf(endStr);
-  
-  // If end time is not exactly in our 1-hour slot markers, we try to find its position
-  // for simplicity in this grid, if it's "12:00 PM", it marks the *start* of that slot hour.
-  // So a 10:00 AM - 12:00 PM spans 10:00 and 11:00 slots. It stops BEFORE the 12:00 label.
-  
   if (startIdx === -1) return null;
-  // If endIdx is -1 (e.g. 06:30 PM) or after 06:00 PM, we use the end of the grid (13)
-  if (endIdx === -1) endIdx = TIME_SLOTS.length; 
-  
-  return { start: startIdx + 1, end: endIdx + 1 };
+  if (endIdx === -1) endIdx = TIME_SLOTS.length - 1; 
+  return { start: startIdx, end: endIdx };
 };
 
 export default function DailyCalendar({ deliveries, currentDate, onEditDelivery, onNewFromSlot }) {
@@ -66,15 +62,6 @@ export default function DailyCalendar({ deliveries, currentDate, onEditDelivery,
     if (onNewFromSlot) onNewFromSlot(currentDate, timeWindow);
   };
 
-  const handleGridMouseLeave = () => {
-    if (isMouseDownRef.current) {
-      isMouseDownRef.current = false;
-      setIsDragging(false);
-      setDragStart(null);
-      setDragEnd(null);
-    }
-  };
-
   const isInDragRange = (slot) => {
     if (!dragStart || !dragEnd) return false;
     const si = TIME_SLOTS.indexOf(dragStart);
@@ -86,59 +73,45 @@ export default function DailyCalendar({ deliveries, currentDate, onEditDelivery,
   return (
     <div className="calendar-container">
       {isDragging && (
-        <div style={{ textAlign: 'center', padding: '0.35rem', background: 'var(--primary)', color: 'white', borderRadius: 'var(--radius-sm)', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>
+        <div className="drag-notification">
           Drag to select a time block — release to create delivery
         </div>
       )}
 
-      <div className="daily-calendar-wrapper" style={{ position: 'relative' }}>
-        {/* Time Labels Column */}
+      <div className="daily-calendar-wrapper">
         <div className="daily-time-column">
           {TIME_SLOTS.map(slot => (
             <div key={slot} className="daily-time-label-slot">{slot}</div>
           ))}
         </div>
 
-        {/* The Grid / Content Area */}
-        <div 
-          className="daily-grid-content" 
-          onMouseLeave={handleGridMouseLeave}
-          style={{ 
-            display: 'grid', 
-            gridTemplateRows: `repeat(${TIME_SLOTS.length}, 80px)`,
-            position: 'relative' 
-          }}
-        >
-          {/* Background Drop Zones (for drag-to-select) */}
-          {TIME_SLOTS.map((slot, idx) => {
-             const highlighted = isInDragRange(slot);
-             return (
-               <div 
-                 key={slot} 
-                 className={`daily-grid-slot ${highlighted ? 'highlighted' : ''}`}
-                 onMouseDown={() => handleMouseDown(slot)}
-                 onMouseEnter={() => handleMouseEnter(slot)}
-                 onMouseUp={() => handleMouseUp(slot)}
-               >
-                 {!isDragging && <div className="slot-hint">drag to select</div>}
-               </div>
-             );
-          })}
+        <div className="daily-grid-content">
+          {TIME_SLOTS.map(slot => (
+            <div 
+              key={slot} 
+              className={`daily-grid-slot ${isInDragRange(slot) ? 'highlighted' : ''}`}
+              onMouseDown={() => handleMouseDown(slot)}
+              onMouseEnter={() => handleMouseEnter(slot)}
+              onMouseUp={() => handleMouseUp(slot)}
+            >
+              {!isDragging && <div className="slot-hint">drag to select</div>}
+            </div>
+          ))}
 
-          {/* Actual Deliveries (positioned blocks) */}
           {dayDeliveries.map(delivery => {
-            const range = getTimeWindowRange(delivery.timeWindow);
-            if (!range) return null;
+            const indices = getTimeWindowIndices(delivery.timeWindow);
+            if (!indices) return null;
             
-            // To prevent overlap issues in this simple view, we can use grid-column if multiple exist,
-            // but for now let's just render them as blocks.
+            const top = indices.start * SLOT_HEIGHT;
+            const height = (indices.end - indices.start) * SLOT_HEIGHT;
+            
             return (
               <div 
                 key={delivery.id} 
                 className={`delivery-block status-${(delivery.status || 'scheduled').toLowerCase()}`}
                 style={{ 
-                  gridRowStart: range.start,
-                  gridRowEnd: range.end,
+                  top: `${top}px`,
+                  height: `${height}px`,
                   zIndex: 5
                 }}
                 onClick={() => onEditDelivery(delivery)}
