@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
 import './WeeklyCalendar.css';
-import { getFilteredDayIndices } from './CalendarFilters';
 
-// Helper functions for dates
 const getStartOfWeek = (date) => {
   const d = new Date(date);
   const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
   return new Date(d.setDate(diff));
 };
 
@@ -20,59 +18,85 @@ const getDaysOfWeek = (startDate) => {
   return days;
 };
 
-const formatDate = (date) => {
-  return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-};
-
 const isSameDay = (date1, date2) => {
   return date1.getFullYear() === date2.getFullYear() &&
          date1.getMonth() === date2.getMonth() &&
          date1.getDate() === date2.getDate();
 };
 
+const formatWeekLabel = (start) => {
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  const opts = { month: 'short', day: 'numeric' };
+  return `${start.toLocaleDateString('en-US', opts)} - ${end.toLocaleDateString('en-US', { ...opts, year: 'numeric' })}`;
+};
+
+// Build a dropdown list of weeks: 8 weeks back, current, 12 weeks ahead
+const buildWeekOptions = (currentWeekStart) => {
+  const options = [];
+  for (let i = -8; i <= 12; i++) {
+    const s = new Date(currentWeekStart);
+    s.setDate(currentWeekStart.getDate() + i * 7);
+    const weekStart = getStartOfWeek(s);
+    options.push(weekStart);
+  }
+  // dedupe
+  const seen = new Set();
+  return options.filter(w => {
+    const k = w.toISOString();
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+};
+
 export default function WeeklyCalendar({ deliveries, onEditDelivery, onNewFromSlot }) {
   const [currentWeekStart, setCurrentWeekStart] = useState(getStartOfWeek(new Date()));
 
   const handlePrevWeek = () => {
-    const newDate = new Date(currentWeekStart);
-    newDate.setDate(currentWeekStart.getDate() - 7);
-    setCurrentWeekStart(newDate);
+    const d = new Date(currentWeekStart);
+    d.setDate(d.getDate() - 7);
+    setCurrentWeekStart(getStartOfWeek(d));
   };
 
   const handleNextWeek = () => {
-    const newDate = new Date(currentWeekStart);
-    newDate.setDate(currentWeekStart.getDate() + 7);
-    setCurrentWeekStart(newDate);
+    const d = new Date(currentWeekStart);
+    d.setDate(d.getDate() + 7);
+    setCurrentWeekStart(getStartOfWeek(d));
   };
 
-  const handleToday = () => {
-    setCurrentWeekStart(getStartOfWeek(new Date()));
-  };
+  const days = getDaysOfWeek(currentWeekStart);
+  const weekOptions = buildWeekOptions(currentWeekStart);
+  const currentKey = currentWeekStart.toISOString();
 
-  const allDays = getDaysOfWeek(currentWeekStart);
-  const days = allDays;
+  const handleWeekSelect = (e) => {
+    setCurrentWeekStart(new Date(e.target.value));
+  };
 
   return (
     <div className="calendar-container">
-      <div className="calendar-header">
-        <div className="week-navigation">
+      <div className="calendar-header" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <button className="btn-icon" onClick={handlePrevWeek}>&larr;</button>
-          <button className="btn-secondary btn-sm" onClick={handleToday}>Current Week</button>
           <button className="btn-icon" onClick={handleNextWeek}>&rarr;</button>
         </div>
-        <h2 className="week-title">
-          {days[0]?.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {days[days.length - 1]?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-        </h2>
+        <select
+          className="btn-secondary"
+          value={currentKey}
+          onChange={handleWeekSelect}
+          style={{ padding: '0.5rem 1rem', fontWeight: 600, fontSize: '1rem' }}
+        >
+          {weekOptions.map(w => (
+            <option key={w.toISOString()} value={w.toISOString()}>
+              {formatWeekLabel(w)}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="calendar-grid">
         {days.map((day, index) => {
-          // Filter deliveries for this specific day
-          const dayDeliveries = deliveries.filter(d => {
-            const deliveryDate = new Date(d.date);
-            return isSameDay(deliveryDate, day);
-          });
-
+          const dayDeliveries = deliveries.filter(d => isSameDay(new Date(d.date), day));
           const isToday = isSameDay(day, new Date());
 
           return (
@@ -81,8 +105,7 @@ export default function WeeklyCalendar({ deliveries, onEditDelivery, onNewFromSl
                 <span className="day-name">{day.toLocaleDateString('en-US', { weekday: 'long' })}</span>
                 <span className="day-number">{day.getDate()}</span>
               </div>
-              
-              <div 
+              <div
                 className="deliveries-list"
                 onClick={() => onNewFromSlot && onNewFromSlot(day)}
                 style={{ cursor: 'pointer' }}
@@ -92,10 +115,10 @@ export default function WeeklyCalendar({ deliveries, onEditDelivery, onNewFromSl
                   <div className="no-deliveries">+ tap to add</div>
                 ) : (
                   dayDeliveries.map(delivery => (
-                    <div 
-                      key={delivery.id} 
-                      className={`delivery-card status-${delivery.status.toLowerCase()}`}
-                      onClick={() => onEditDelivery(delivery)}
+                    <div
+                      key={delivery.id}
+                      className={`delivery-card status-${(delivery.status || 'scheduled').toLowerCase()}`}
+                      onClick={(e) => { e.stopPropagation(); onEditDelivery(delivery); }}
                     >
                       <div className="delivery-time">{delivery.timeWindow}</div>
                       <div className="delivery-client">{delivery.clientName}</div>
