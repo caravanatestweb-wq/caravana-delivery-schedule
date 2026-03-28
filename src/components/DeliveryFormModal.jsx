@@ -260,7 +260,7 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, d
                 </div>
                 <div className="form-group" style={{ marginTop: '1rem' }}>
                   <label>Delivery Address</label>
-                  <textarea name="address" value={formData.address} onChange={handleChange} rows="2" placeholder="Full address and unit #" required />
+                  <textarea name="address" value={formData.address} onChange={handleChange} rows="4" placeholder="Full address and unit #" required />
                 </div>
               </section>
 
@@ -284,7 +284,7 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, d
                 </div>
                 <div className="form-group" style={{ marginTop: '1rem' }}>
                   <label>Additional Notes (Gate code, access instructions, etc.)</label>
-                  <textarea name="notes" value={formData.notes} onChange={handleChange} rows="3" placeholder="Add any special instructions here..." />
+                  <textarea name="notes" value={formData.notes} onChange={handleChange} rows="5" placeholder="Add any special instructions here..." />
                 </div>
               </section>
             </div>
@@ -337,7 +337,7 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, d
                    <h3 className="section-title" style={{ margin: 0 }}>6. Photos</h3>
                    <label className="btn-secondary btn-sm" style={{ cursor: 'pointer', margin: 0 }}>
                      {isUploading ? 'Uploading...' : '+ Add Photo'}
-                     <input type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display: 'none' }} disabled={isUploading} />
+                     <input type="file" accept="image/*" capture="environment" onChange={handlePhotoUpload} style={{ display: 'none' }} disabled={isUploading} />
                    </label>
                 </div>
                 <div className="photo-preview-grid">

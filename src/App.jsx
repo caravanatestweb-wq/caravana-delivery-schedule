@@ -1,4 +1,4 @@
-/* VERSION: 1.0.5-MIGRATE */
+/* VERSION: 1.0.6-MOBILE-FIX */
 import { useState, useEffect } from 'react';
 import WeeklyCalendar from './components/WeeklyCalendar';
 import MonthlyCalendar from './components/MonthlyCalendar';
@@ -109,15 +109,15 @@ function App() {
               console.log('Merging local data to Supabase...');
               const transformed = localData.map(d => ({
                 date: d.date,
-                time_window: d.timeWindow,
+                timeWindow: d.timeWindow,
                 source: d.source || 'Caravana store',
-                scheduled_by: d.scheduledBy || '',
-                client_name: d.clientName || '',
+                scheduledBy: d.scheduledBy || '',
+                clientName: d.clientName || '',
                 address: d.address || '',
                 phone: d.phone || '',
                 status: d.status || 'Scheduled',
                 notes: d.notes || '',
-                packing_list: d.packingList || []
+                packingList: d.packingList || []
               }));
               
               // Insert local data (Supabase handles duplicates if we had a unique constraint, but here we just append)
@@ -143,16 +143,16 @@ function App() {
         const mapped = (data || []).map(d => ({
           id: d.id,
           date: d.date,
-          timeWindow: d.time_window,
+          timeWindow: d.timeWindow,
           source: d.source,
-          scheduledBy: d.scheduled_by,
-          clientName: d.client_name,
+          scheduledBy: d.scheduledBy,
+          clientName: d.clientName,
           address: d.address,
           phone: d.phone,
           status: d.status,
           notes: d.notes,
-          packingList: d.packing_list || [],
-          photoUrls: d.photo_urls || []
+          packingList: d.packingList || [],
+          photoUrls: d.photoUrls || []
         }));
         setDeliveries(mapped);
       }
@@ -194,16 +194,16 @@ function App() {
   const handleSaveDelivery = async (deliveryData) => {
     const payload = {
       date: deliveryData.date,
-      time_window: deliveryData.timeWindow,
+      timeWindow: deliveryData.timeWindow,
       source: deliveryData.source,
-      scheduled_by: deliveryData.scheduledBy,
-      client_name: deliveryData.clientName,
+      scheduledBy: deliveryData.scheduledBy,
+      clientName: deliveryData.clientName,
       address: deliveryData.address,
       phone: deliveryData.phone,
       status: deliveryData.status,
       notes: deliveryData.notes,
-      packing_list: deliveryData.packingList || [],
-      photo_urls: deliveryData.photoUrls || []
+      packingList: deliveryData.packingList || [],
+      photoUrls: deliveryData.photoUrls || []
     };
 
     if (deliveryData.id && deliveryData.id.length > 20) { // Check if it's a UUID
