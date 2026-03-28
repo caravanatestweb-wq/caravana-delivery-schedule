@@ -1,8 +1,10 @@
+/* VERSION: 1.0.5-MIGRATE */
 import { useState, useEffect } from 'react';
 import WeeklyCalendar from './components/WeeklyCalendar';
 import MonthlyCalendar from './components/MonthlyCalendar';
 import DailyCalendar from './components/DailyCalendar';
 import DeliveryFormModal from './components/DeliveryFormModal';
+import { supabase } from './lib/supabaseClient';
 import './App.css';
 
 const getStartOfWeek = (date) => {
@@ -78,22 +80,97 @@ const getLocalDateString = (date = new Date()) => {
 };
 
 function App() {
+  const [isLoading, setIsLoading] = useState(true);
   const [deliveries, setDeliveries] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDelivery, setEditingDelivery] = useState(null);
   const [viewMode, setViewMode] = useState('weekly');
   const [currentDate, setCurrentDate] = useState(new Date());
 
+  // 1. Initial Load from Supabase
   useEffect(() => {
-    const saved = localStorage.getItem('furniture_deliveries');
-    if (saved) {
-      try { setDeliveries(JSON.parse(saved)); } catch (e) { console.error(e); }
-    }
-  }, []);
+    const fetchDeliveries = async () => {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('deliveries')
+        .select('*');
+      
+      if (error) {
+        console.error('Error fetching deliveries:', error);
+      } else {
+        // 🔍 Aggressive Migration Logic
+        const localSaved = localStorage.getItem('furniture_deliveries');
+        const isMigrated = localStorage.getItem('supabase_migrated');
 
-  useEffect(() => {
-    localStorage.setItem('furniture_deliveries', JSON.stringify(deliveries));
-  }, [deliveries]);
+        if (localSaved && !isMigrated) {
+          try {
+            const localData = JSON.parse(localSaved);
+            if (localData.length > 0) {
+              console.log('Merging local data to Supabase...');
+              const transformed = localData.map(d => ({
+                date: d.date,
+                time_window: d.timeWindow,
+                source: d.source || 'Caravana store',
+                scheduled_by: d.scheduledBy || '',
+                client_name: d.clientName || '',
+                address: d.address || '',
+                phone: d.phone || '',
+                status: d.status || 'Scheduled',
+                notes: d.notes || '',
+                packing_list: d.packingList || []
+              }));
+              
+              // Insert local data (Supabase handles duplicates if we had a unique constraint, but here we just append)
+              const { error: insErr } = await supabase.from('deliveries').insert(transformed);
+              
+              if (!insErr) {
+                localStorage.setItem('supabase_migrated', 'true');
+                console.log('Migration successful!');
+                // Re-fetch to get the merged data
+                return fetchDeliveries();
+              } else {
+                console.error('Migration error:', insErr);
+              }
+            } else {
+              localStorage.setItem('supabase_migrated', 'true'); // Nothing to migrate
+            }
+          } catch (e) { 
+            console.error('Migration parsing error:', e);
+            localStorage.setItem('supabase_migrated', 'true'); // Avoid crashing repeatedly
+          }
+        }
+        
+        const mapped = (data || []).map(d => ({
+          id: d.id,
+          date: d.date,
+          timeWindow: d.time_window,
+          source: d.source,
+          scheduledBy: d.scheduled_by,
+          clientName: d.client_name,
+          address: d.address,
+          phone: d.phone,
+          status: d.status,
+          notes: d.notes,
+          packingList: d.packing_list || [],
+          photoUrls: d.photo_urls || []
+        }));
+        setDeliveries(mapped);
+      }
+      setIsLoading(false);
+    };
+
+    fetchDeliveries();
+
+    // 2. Real-time Subscription
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'deliveries' }, (payload) => {
+        fetchDeliveries();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   const handleOpenNewModal = () => { setEditingDelivery(null); setIsModalOpen(true); };
   const handleNewFromSlot = (date, timeWindow) => {
@@ -101,18 +178,40 @@ function App() {
     setEditingDelivery({
       id: null, date: dateStr, timeWindow: timeWindow || '08:00 AM - 10:00 AM',
       source: 'Caravana store', scheduledBy: '', clientName: '', contactName: '', address: '',
-      phone: '', contactStatus: 'Scheduled', invoiceNumber: '', packingList: [], status: 'Scheduled', notes: ''
+      phone: '', contactStatus: 'Scheduled', invoiceNumber: '', packingList: [], status: 'Scheduled', notes: '', photoUrls: []
     });
     setIsModalOpen(true);
   };
   const handleEditDelivery = (delivery) => { setEditingDelivery(delivery); setIsModalOpen(true); };
   const handleCloseModal = () => { setIsModalOpen(false); setEditingDelivery(null); };
-  const handleDeleteDelivery = (id) => { setDeliveries(prev => prev.filter(d => d.id !== id)); handleCloseModal(); };
-  const handleSaveDelivery = (deliveryData) => {
-    if (editingDelivery && editingDelivery.id) {
-      setDeliveries(prev => prev.map(d => d.id === deliveryData.id ? deliveryData : d));
+
+  const handleDeleteDelivery = async (id) => {
+    const { error } = await supabase.from('deliveries').delete().eq('id', id);
+    if (error) alert("Error deleting: " + error.message);
+    else handleCloseModal();
+  };
+
+  const handleSaveDelivery = async (deliveryData) => {
+    const payload = {
+      date: deliveryData.date,
+      time_window: deliveryData.timeWindow,
+      source: deliveryData.source,
+      scheduled_by: deliveryData.scheduledBy,
+      client_name: deliveryData.clientName,
+      address: deliveryData.address,
+      phone: deliveryData.phone,
+      status: deliveryData.status,
+      notes: deliveryData.notes,
+      packing_list: deliveryData.packingList || [],
+      photo_urls: deliveryData.photoUrls || []
+    };
+
+    if (deliveryData.id && deliveryData.id.length > 20) { // Check if it's a UUID
+      const { error } = await supabase.from('deliveries').update(payload).eq('id', deliveryData.id);
+      if (error) alert("Error updating: " + error.message);
     } else {
-      setDeliveries(prev => [...prev, { ...deliveryData, id: Date.now().toString() }]);
+      const { error } = await supabase.from('deliveries').insert([payload]);
+      if (error) alert("Error saving: " + error.message);
     }
     handleCloseModal();
   };

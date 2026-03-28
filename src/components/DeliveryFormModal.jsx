@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabaseClient';
 import './DeliveryFormModal.css';
 
 const getLocalDateString = (date = new Date()) => {
@@ -46,6 +46,7 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, d
   const [formData, setFormData] = useState(DEFAULT_FORM_STATE);
   const [customStart, setCustomStart] = useState(null);
   const [customEnd, setCustomEnd] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const TIME_WINDOWS = [
     '08:00 AM - 10:00 AM',
@@ -126,10 +127,35 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, d
     }));
   };
 
-  const removePackingItem = (id) => {
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const fileName = `${Date.now()}_${file.name.replace(/\s/g, '_')}`;
+    const { data, error } = await supabase.storage
+      .from('delivery-photos')
+      .upload(fileName, file);
+
+    if (error) {
+      alert("Error uploading photo: " + error.message);
+    } else {
+      const { data: { publicUrl } } = supabase.storage
+        .from('delivery-photos')
+        .getPublicUrl(fileName);
+      
+      setFormData(prev => ({
+        ...prev,
+        photoUrls: [...(prev.photoUrls || []), publicUrl]
+      }));
+    }
+    setIsUploading(false);
+  };
+
+  const removePhoto = (urlToRemove) => {
     setFormData(prev => ({
       ...prev,
-      packingList: prev.packingList.filter(item => item.id !== id)
+      photoUrls: (prev.photoUrls || []).filter(url => url !== urlToRemove)
     }));
   };
 
@@ -302,6 +328,27 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, d
                       )}
                     </div>
                   ))}
+                </div>
+              </section>
+
+              <section className="form-section" style={{ marginTop: '2rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                   <h3 className="section-title" style={{ margin: 0 }}>6. Photos</h3>
+                   <label className="btn-secondary btn-sm" style={{ cursor: 'pointer', margin: 0 }}>
+                     {isUploading ? 'Uploading...' : '+ Add Photo'}
+                     <input type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display: 'none' }} disabled={isUploading} />
+                   </label>
+                </div>
+                <div className="photo-preview-grid">
+                  {(formData.photoUrls || []).map((url, idx) => (
+                    <div key={idx} className="photo-preview-item">
+                      <img src={url} alt={`Delivery ${idx + 1}`} />
+                      <button type="button" className="photo-remove-btn" onClick={() => removePhoto(url)}>&times;</button>
+                    </div>
+                  ))}
+                  {(!formData.photoUrls || formData.photoUrls.length === 0) && (
+                    <div className="photo-placeholder">No photos attached</div>
+                  )}
                 </div>
               </section>
             </div>
