@@ -108,6 +108,7 @@ function App() {
             if (localData.length > 0) {
               console.log('Merging local data to Supabase...');
               const transformed = localData.map(d => ({
+                id: (d.id && d.id.toString().length > 20) ? d.id : crypto.randomUUID(),
                 date: d.date,
                 timeWindow: d.timeWindow,
                 source: d.source || 'Caravana store',
@@ -120,23 +121,21 @@ function App() {
                 packingList: d.packingList || []
               }));
               
-              // Insert local data (Supabase handles duplicates if we had a unique constraint, but here we just append)
               const { error: insErr } = await supabase.from('deliveries').insert(transformed);
               
               if (!insErr) {
                 localStorage.setItem('supabase_migrated', 'true');
                 console.log('Migration successful!');
-                // Re-fetch to get the merged data
                 return fetchDeliveries();
               } else {
                 console.error('Migration error:', insErr);
               }
             } else {
-              localStorage.setItem('supabase_migrated', 'true'); // Nothing to migrate
+              localStorage.setItem('supabase_migrated', 'true');
             }
           } catch (e) { 
             console.error('Migration parsing error:', e);
-            localStorage.setItem('supabase_migrated', 'true'); // Avoid crashing repeatedly
+            localStorage.setItem('supabase_migrated', 'true');
           }
         }
         
@@ -192,7 +191,11 @@ function App() {
   };
 
   const handleSaveDelivery = async (deliveryData) => {
+    const isNew = !deliveryData.id || deliveryData.id.toString().length < 20;
+    const finalId = isNew ? crypto.randomUUID() : deliveryData.id;
+
     const payload = {
+      id: finalId,
       date: deliveryData.date,
       timeWindow: deliveryData.timeWindow,
       source: deliveryData.source,
@@ -206,12 +209,12 @@ function App() {
       photoUrls: deliveryData.photoUrls || []
     };
 
-    if (deliveryData.id && deliveryData.id.length > 20) { // Check if it's a UUID
-      const { error } = await supabase.from('deliveries').update(payload).eq('id', deliveryData.id);
-      if (error) alert("Error updating: " + error.message);
-    } else {
+    if (isNew) {
       const { error } = await supabase.from('deliveries').insert([payload]);
       if (error) alert("Error saving: " + error.message);
+    } else {
+      const { error } = await supabase.from('deliveries').update(payload).eq('id', finalId);
+      if (error) alert("Error updating: " + error.message);
     }
     handleCloseModal();
   };
