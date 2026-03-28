@@ -1,4 +1,4 @@
-/* VERSION: 1.0.6-MOBILE-FIX */
+/* VERSION: 1.0.7-ARCHIVE */
 import { useState, useEffect } from 'react';
 import WeeklyCalendar from './components/WeeklyCalendar';
 import MonthlyCalendar from './components/MonthlyCalendar';
@@ -86,6 +86,7 @@ function App() {
   const [editingDelivery, setEditingDelivery] = useState(null);
   const [viewMode, setViewMode] = useState('weekly');
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [showArchive, setShowArchive] = useState(false);
 
   // 1. Initial Load from Supabase
   useEffect(() => {
@@ -224,6 +225,32 @@ function App() {
   const handleNext = () => setCurrentDate(navigate(currentDate, viewMode, 1));
   const handleDropdownChange = (e) => setCurrentDate(new Date(e.target.value));
 
+  const handleArchiveDelivery = async (id) => {
+    const { error } = await supabase.from('deliveries').update({ status: 'Archived' }).eq('id', id);
+    if (error) alert('Error archiving: ' + error.message);
+    else handleCloseModal();
+  };
+
+  const handleExportCSV = () => {
+    const rows = deliveries.filter(d => d.status === 'Archived');
+    if (rows.length === 0) { alert('No archived deliveries to export yet.'); return; }
+    const headers = ['Date','Time Window','Client Name','Phone','Address','Source','Scheduled By','Status','Notes','Photos'];
+    const csvRows = rows.map(d => [
+      d.date, d.timeWindow, d.clientName, d.phone, `"${(d.address||'').replace(/"/g,'""')}"`,
+      d.source, d.scheduledBy, d.status, `"${(d.notes||'').replace(/"/g,'""')}"`,
+      (d.photoUrls||[]).join(' | ')
+    ].join(','));
+    const csv = [headers.join(','), ...csvRows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `caravana-archive-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+  };
+
+  const liveDeliveries = deliveries.filter(d => d.status !== 'Archived');
+  const archivedDeliveries = deliveries.filter(d => d.status === 'Archived');
+
   const dateOptions = buildDateOptions(currentDate, viewMode);
   // Find the closest matching option value for the current selection
   const currentOptionValue = dateOptions.find(o => {
@@ -243,9 +270,25 @@ function App() {
           <h1 className="app-title">
             <span>◇</span> Caravana Schedule Hub
           </h1>
-          <button className="btn-primary" onClick={handleOpenNewModal}>
-            + New Delivery
-          </button>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+            <button
+              className="btn-secondary"
+              style={{ fontSize: '0.85rem' }}
+              onClick={() => setShowArchive(v => !v)}
+            >
+              {showArchive ? '← Live Schedule' : '📦 Archive (' + archivedDeliveries.length + ')'}
+            </button>
+            {showArchive && (
+              <button className="btn-secondary" style={{ fontSize: '0.85rem' }} onClick={handleExportCSV}>
+                ⬇ Export CSV
+              </button>
+            )}
+            {!showArchive && (
+              <button className="btn-primary" onClick={handleOpenNewModal}>
+                + New Delivery
+              </button>
+            )}
+          </div>
         </header>
 
         {/* ── Unified Calendar Nav Bar ── */}
@@ -288,31 +331,64 @@ function App() {
           </button>
         </div>
 
-        {/* ── Calendar Views ── */}
+        {/* ── Calendar Views or Archive ── */}
         <main>
-          {viewMode === 'daily' && (
-            <DailyCalendar
-              deliveries={deliveries}
-              currentDate={currentDate}
-              onEditDelivery={handleEditDelivery}
-              onNewFromSlot={handleNewFromSlot}
-            />
-          )}
-          {viewMode === 'weekly' && (
-            <WeeklyCalendar
-              deliveries={deliveries}
-              currentDate={currentDate}
-              onEditDelivery={handleEditDelivery}
-              onNewFromSlot={handleNewFromSlot}
-            />
-          )}
-          {viewMode === 'monthly' && (
-            <MonthlyCalendar
-              deliveries={deliveries}
-              currentDate={currentDate}
-              onEditDelivery={handleEditDelivery}
-              onNewFromSlot={handleNewFromSlot}
-            />
+          {showArchive ? (
+            <div className="archive-view">
+              <h2 style={{ marginBottom: '1rem', color: 'var(--text-light)', fontSize: '1rem', fontWeight: 600 }}>
+                📦 {archivedDeliveries.length} Archived Deliveries
+              </h2>
+              {archivedDeliveries.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-light)' }}>
+                  No archived deliveries yet. Archive a delivery by setting its status to "Archived".
+                </div>
+              ) : (
+                <div className="archive-list">
+                  {archivedDeliveries.sort((a,b) => b.date.localeCompare(a.date)).map(d => (
+                    <div key={d.id} className="archive-card" onClick={() => handleEditDelivery(d)}>
+                      <div className="archive-card-date">{d.date}</div>
+                      <div className="archive-card-name">{d.clientName}</div>
+                      <div className="archive-card-meta">{d.timeWindow} · {d.source}</div>
+                      {d.scheduledBy && <div className="archive-card-by">by {d.scheduledBy}</div>}
+                      {(d.photoUrls||[]).length > 0 && (
+                        <div className="archive-card-photos">
+                          {d.photoUrls.map((url, i) => (
+                            <img key={i} src={url} alt="delivery" className="archive-thumb" onClick={e => { e.stopPropagation(); window.open(url, '_blank'); }} />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
+              {viewMode === 'daily' && (
+                <DailyCalendar
+                  deliveries={liveDeliveries}
+                  currentDate={currentDate}
+                  onEditDelivery={handleEditDelivery}
+                  onNewFromSlot={handleNewFromSlot}
+                />
+              )}
+              {viewMode === 'weekly' && (
+                <WeeklyCalendar
+                  deliveries={liveDeliveries}
+                  currentDate={currentDate}
+                  onEditDelivery={handleEditDelivery}
+                  onNewFromSlot={handleNewFromSlot}
+                />
+              )}
+              {viewMode === 'monthly' && (
+                <MonthlyCalendar
+                  deliveries={liveDeliveries}
+                  currentDate={currentDate}
+                  onEditDelivery={handleEditDelivery}
+                  onNewFromSlot={handleNewFromSlot}
+                />
+              )}
+            </>
           )}
         </main>
       </div>
@@ -322,6 +398,7 @@ function App() {
         onClose={handleCloseModal}
         onSave={handleSaveDelivery}
         onDelete={handleDeleteDelivery}
+        onArchive={handleArchiveDelivery}
         delivery={editingDelivery}
         allDeliveries={deliveries}
       />

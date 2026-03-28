@@ -43,7 +43,7 @@ const HOUR_OPTIONS = [
   '04:00 PM','05:00 PM','06:00 PM'
 ];
 
-export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, delivery, allDeliveries = [] }) {
+export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, onArchive, delivery, allDeliveries = [] }) {
   const [formData, setFormData] = useState(DEFAULT_FORM_STATE);
   const [customStart, setCustomStart] = useState(null);
   const [customEnd, setCustomEnd] = useState(null);
@@ -358,9 +358,16 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, d
 
           <div className="modal-footer" style={{ justifyContent: delivery ? 'space-between' : 'flex-end' }}>
             {delivery && (
-              <button type="button" className="btn-secondary" style={{ color: 'red', borderColor: 'red' }} onClick={() => onDelete(delivery.id)}>
-                Delete Delivery
-              </button>
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button type="button" className="btn-secondary" style={{ color: 'red', borderColor: 'red' }} onClick={() => onDelete(delivery.id)}>
+                  Delete
+                </button>
+                {delivery.id && onArchive && delivery.status !== 'Archived' && (
+                  <button type="button" className="btn-secondary" style={{ color: '#9c27b0', borderColor: '#9c27b0' }} onClick={() => onArchive(delivery.id)}>
+                    📦 Archive
+                  </button>
+                )}
+              </div>
             )}
             <div style={{ display: 'flex', gap: '1rem' }}>
               <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
