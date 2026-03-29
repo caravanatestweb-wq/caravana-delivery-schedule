@@ -5,32 +5,30 @@ export const getTMCredentials = () => ({
 });
 
 /**
- * Sends an SMS via TextMagic REST API v2
+ * Sends an SMS via our secure Vercel API Bridge
  * @param {string} phone - Target phone number
  * @param {string} message - Message text
- * @returns {Promise<Object>} - TextMagic response
+ * @returns {Promise<Object>} - API response
  */
 export const sendTextMagicSMS = async (phone, message) => {
-  const { username, apiKey } = getTMCredentials();
-  if (!username || !apiKey) throw new Error('TextMagic credentials not set — go to Settings ⚙️');
-
   // Clean phone number to digits only, ensure +1 prefix for US numbers
   const cleanPhone = phone.replace(/\D/g, '');
   const e164 = cleanPhone.startsWith('1') ? `+${cleanPhone}` : `+1${cleanPhone}`;
 
-  const resp = await fetch('https://rest.textmagic.com/api/v2/messages', {
-    method: 'POST',
-    headers: {
-      'X-TM-Username': username,
-      'X-TM-Key': apiKey,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ text: message, phones: e164 }),
-  });
+  try {
+    const resp = await fetch('/api/sms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: message, phones: e164 }),
+    });
 
-  if (!resp.ok) {
-    const err = await resp.json().catch(() => ({}));
-    throw new Error(err.message || `TextMagic error ${resp.status}`);
+    const data = await resp.json();
+    if (!resp.ok) {
+      throw new Error(data.message || data.error || `Error ${resp.status}`);
+    }
+    return data;
+  } catch (err) {
+    console.error('SMS sending error:', err);
+    throw err;
   }
-  return await resp.json();
 };

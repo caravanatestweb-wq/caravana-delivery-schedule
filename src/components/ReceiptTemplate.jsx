@@ -36,6 +36,7 @@ export default function ReceiptTemplate({ delivery }) {
   const dateStr = fmtDate(delivery.date) || '';
   const signDate = fmtDate(delivery.signDate) || dateStr;
   const items = delivery.items || [];
+  const isReturn = !!delivery.flagged;
   
   // Fill 12 rows for the table
   const rows = [...Array(12)].map((_, i) => items[i] || {});
@@ -46,7 +47,9 @@ export default function ReceiptTemplate({ delivery }) {
         <img src="/logo.png" style={styles.logo} alt="Caravana Furniture" />
       </div>
       
-      <div style={styles.title}>RECEIPT OF GOODS ACKNOWLEDGEMENT</div>
+      <div style={styles.title}>
+        {isReturn ? 'RECEIPT OF PICKUP ACKNOWLEDGEMENT' : 'RECEIPT OF GOODS ACKNOWLEDGEMENT'}
+      </div>
 
       <div style={styles.dateWrap}>
         Date: <span style={styles.dateVal}>{dateStr}</span>
@@ -91,7 +94,9 @@ export default function ReceiptTemplate({ delivery }) {
       </div>
 
       <div>
-        <div style={{ fontSize: 15, marginTop: 15 }}>List of goods delivered.</div>
+        <div style={{ fontSize: 15, marginTop: 15 }}>
+          {isReturn ? 'List of goods picked up.' : 'List of goods delivered.'}
+        </div>
         <table style={styles.table}>
           <thead>
             <tr>
@@ -118,9 +123,11 @@ export default function ReceiptTemplate({ delivery }) {
       <div style={styles.terms}>
         The undersigned hereby acknowledges receipt and delivery of the goods described on the annexed list or invoice and further acknowledges that said goods have been inspected and are delivered without damage. Any concealed damages or manufacturing defects must be reported within 24 hours. The customer acknowledges that outside of the approved 7-Day trial items, there are absolutely no cash refunds or exchanges after the merchandise has been received, assembled, or removed from original packaging. 
         <br /><br />
-        <strong>Clearance Item</strong><br />
-        All clearance items are final sale. Floor models are sold as-is. No returns, exchanges, or additional discounts apply. Same as floor samples.<br />
-        In this web address we have more information about our 7 day trial <a href="https://www.caravanafurniture.com/pages/return-policy" style={{ color: '#000', textDecoration: 'underline' }}>https://www.caravanafurniture.com/pages/return-policy</a> please review.
+        <strong>Clearance Item:</strong> All clearance items are final sale. Floor models are sold as-is. No returns, exchanges, or additional discounts apply. Same as floor samples.
+        <br /><br />
+        <strong>Policies:</strong><br />
+        7-Day Home Comfort Trial: <a href="https://www.caravanafurniture.com/pages/return-policy" style={{ color: '#000', textDecoration: 'underline' }}>https://www.caravanafurniture.com/pages/return-policy</a><br />
+        Full Warranty Details: <a href="https://www.caravanafurniture.com/pages/warranty" style={{ color: '#000', textDecoration: 'underline' }}>https://www.caravanafurniture.com/pages/warranty</a>
       </div>
 
       <div style={styles.sigArea}>

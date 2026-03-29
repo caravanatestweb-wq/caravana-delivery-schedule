@@ -17,16 +17,10 @@ export default function ETAPanel({ delivery, onClose }) {
   const [sentStatus, setSentStatus] = useState(null);
 
   const cur = STATUSES.find(s => s.v === status) || STATUSES[1];
-  const firstName = (delivery.clientName || 'there').split(' ')[0];
-  const team = delivery.deliveryTeam || delivery.scheduledBy || '';
-
   const message = useMemo(() => 
-    `Hi ${firstName}, ${cur.msg} Estimated arrival: ~${minutes} minutes.${team ? ` Your delivery team: ${team}.` : ''}${note ? ` Note: ${note}` : ''} — Caravana Furniture | (562) 432-0562`,
-    [firstName, cur.msg, minutes, team, note]
+    `Hi ${firstName}, ${cur.msg} Estimated arrival: ~${minutes} minutes.${delivery.deliveryTeam ? ` Team: ${delivery.deliveryTeam}.` : ''}${note ? ` Note: ${note}` : ''} — Caravana Furniture`,
+    [firstName, cur.msg, minutes, delivery.deliveryTeam, note]
   );
-
-  const { username, apiKey } = getTMCredentials();
-  const hasCredentials = !!(username && apiKey);
 
   const handleCopy = () => {
     navigator.clipboard?.writeText(message);
@@ -161,11 +155,6 @@ export default function ETAPanel({ delivery, onClose }) {
             </div>
           )}
           
-          {hasCredentials && (
-            <div style={{ fontSize: 11, textAlign: 'center', color: 'var(--text-light)', marginTop: 4 }}>
-              Message will be sent directly via TextMagic API
-            </div>
-          )}
         </div>
       </div>
     </div>

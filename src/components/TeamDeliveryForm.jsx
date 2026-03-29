@@ -4,15 +4,23 @@ import { addDays, fmtDate, localDate, getInspectionList } from '../lib/constants
 import SignaturePad from './SignaturePad';
 import ETAPanel from './ETAPanel';
 import StylingTipsPanel from './StylingTipsPanel';
+import { getTMCredentials, sendTextMagicSMS } from '../lib/sms';
 import ReceiptTemplate from './ReceiptTemplate';
 
 const LEGAL_TEXT = `The undersigned hereby acknowledges receipt and delivery of the goods described on the annexed list or invoice and further acknowledges that said goods have been inspected and are delivered without damage. Any concealed damages or manufacturing defects must be reported within 24 hours. The customer acknowledges that outside of the approved 7-Day trial items, there are absolutely no cash refunds or exchanges after the merchandise has been received, assembled, or removed from original packaging.
 
 Clearance Item
-All clearance items are final sale. Floor models are sold as-is. No returns, exchanges, or additional discounts apply. Same as floor samples. 
-In this web address we have more information about our 7 day trial https://www.caravanafurniture.com/pages/return-policy please review.`;
+All clearance items are final sale. Floor models are sold as-is. No returns, exchanges, or additional discounts apply. Same as floor samples.
 
-const PICKUP_TEXT = `By signing below, I acknowledge that the above items have been picked up by Caravana Furniture and the condition has been documented. I understand the applicable fees as communicated.`;
+Policies:
+7-Day Trial: https://www.caravanafurniture.com/pages/return-policy
+Warranty: https://www.caravanafurniture.com/pages/warranty`;
+
+const PICKUP_TEXT = `By signing below, I acknowledge that the above items have been picked up by Caravana Furniture and the condition has been documented. I understand the applicable fees as communicated.
+
+Policies:
+7-Day Trial: https://www.caravanafurniture.com/pages/return-policy
+Warranty: https://www.caravanafurniture.com/pages/warranty`;
 
 export default function TeamDeliveryForm({ delivery, onBack, updateDelivery }) {
   const isReturn = !!delivery.flagged;
@@ -47,7 +55,9 @@ export default function TeamDeliveryForm({ delivery, onBack, updateDelivery }) {
   const [generatingPdf, setGeneratingPdf] = useState(false);
 
   const firstName = (delivery.clientName || '').split(' ')[0] || 'there';
-  const defaultSmsMsg = `Hi ${firstName}, this is Caravana Furniture. Your delivery is complete! 🎉\n\nYou can securely view and download your signed Delivery Acknowledgement here:\n{{RECEIPT_LINK}}\n\nAny questions? 📞 (562) 432-0562`;
+  const defaultSmsMsg = isReturn 
+    ? `Hi ${firstName}, this is Caravana Furniture. Your pickup/return has been processed! 🔄\n\nYou can view and download your signed Acknowledgement here:\n{{RECEIPT_LINK}}\n\nAny questions? 📞 (562) 432-0562`
+    : `Hi ${firstName}, this is Caravana Furniture. Your delivery is complete! 🎉\n\nYou can securely view and download your signed Delivery Acknowledgement here:\n{{RECEIPT_LINK}}\n\nAny questions? 📞 (562) 432-0562`;
   const [smsMsg, setSmsMsg] = useState(defaultSmsMsg);
 
   // Auto-mark as in-progress when opened
@@ -144,7 +154,7 @@ export default function TeamDeliveryForm({ delivery, onBack, updateDelivery }) {
           )}
 
           {/* Acknowledgement PDF Option */}
-          {delivery.phone && (!isReturn && completeMode === 'Delivered') && (
+          {delivery.phone && (
             <div style={{ marginTop: '1.5rem', textAlign: 'left' }}>
               <label style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-main)', marginBottom: 8, display: 'block' }}>Customize SMS Message:</label>
               <textarea
@@ -161,13 +171,6 @@ export default function TeamDeliveryForm({ delivery, onBack, updateDelivery }) {
                     return;
                   }
                   
-                  const username = localStorage.getItem('tm_username');
-                  const apiKey = localStorage.getItem('tm_apikey');
-                  if (!username || !apiKey) {
-                    alert('TextMagic API keys are not configured. Go to Office Area -> Settings to connect TextMagic first.');
-                    return;
-                  }
-
                   setGeneratingPdf(true);
                   try {
                     const element = document.getElementById('receipt-pdf-template');
@@ -192,15 +195,7 @@ export default function TeamDeliveryForm({ delivery, onBack, updateDelivery }) {
 
                     const finalMsg = smsMsg.replace('{{RECEIPT_LINK}}', publicUrl);
 
-                    const clean = delivery.phone.replace(/\D/g,'');
-                    const e164 = clean.startsWith('1') ? `+${clean}` : `+1${clean}`;
-                    
-                    const res = await fetch('https://rest.textmagic.com/api/v2/messages', {
-                      method: 'POST',
-                      headers: { 'X-TM-Username': username, 'X-TM-Key': apiKey, 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ text: finalMsg, phones: e164 })
-                    });
-                    if (!res.ok) throw new Error('Failed to send text via TextMagic API');
+                    await sendTextMagicSMS(delivery.phone, finalMsg);
                     
                     alert('✅ Acknowledgement PDF generated and texted successfully!');
                   } catch (err) {

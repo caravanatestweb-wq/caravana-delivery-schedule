@@ -159,19 +159,7 @@ function App() {
       }
       setIsLoading(false);
     };
-
-    // Load API Keys globally
-    const loadSettings = async () => {
-      const { data, error } = await supabase.from('app_settings').select('*').limit(1);
-      if (!error && data && data.length > 0) {
-        const settings = data[0];
-        if (settings.tm_user && settings.tm_key) {
-          localStorage.setItem('tm_username', settings.tm_user);
-          localStorage.setItem('tm_apikey', settings.tm_key);
-        }
-      }
-    };
-    loadSettings();
+    fetchDeliveries();
 
     // Also load repairs and team members
     const loadRepairs = async () => {

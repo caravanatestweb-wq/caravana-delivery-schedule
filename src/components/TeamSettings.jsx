@@ -172,39 +172,19 @@ export default function TeamSettings({ onClose }) {
               {/* TextMagic */}
               <div style={{ background: 'var(--bg-color)', borderRadius: 12, border: '1px solid var(--border)', padding: '16px', marginBottom: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                  <div style={{ fontSize: 22 }}>📱</div>
+                  <div style={{ fontSize: 22 }}>🚀</div>
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-main)' }}>TextMagic SMS</div>
-                    <div style={{ fontSize: 12, color: tmConnected ? '#0b7a4a' : '#c53030', fontWeight: 600 }}>
-                      {tmConnected ? '✅ Connected' : '⚠️ Not configured'}
+                    <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-main)' }}>Secure SMS Dispatch</div>
+                    <div style={{ fontSize: 12, color: '#0b7a4a', fontWeight: 600 }}>
+                      ✅ Active via Vercel API
                     </div>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <div>
-                    <label style={{ fontSize: 12, color: 'var(--text-light)', display: 'block', marginBottom: 4 }}>Username</label>
-                    <input value={tmUser} onChange={e => setTmUser(e.target.value)}
-                      placeholder="Your TextMagic username"
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--surface)', color: 'var(--text-main)', fontSize: 14, boxSizing: 'border-box', fontFamily: 'inherit' }} />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: 12, color: 'var(--text-light)', display: 'block', marginBottom: 4 }}>API Key</label>
-                    <input type="password" value={tmKey} onChange={e => setTmKey(e.target.value)}
-                      placeholder="Paste your API key here"
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--surface)', color: 'var(--text-main)', fontSize: 14, boxSizing: 'border-box', fontFamily: 'inherit' }} />
-                  </div>
-                  <div style={{ fontSize: 11, color: 'var(--text-light)' }}>
-                    Get your key at <a href="https://my.textmagic.com/online/api/rest-api/keys" target="_blank" rel="noreferrer" style={{ color: 'var(--primary)' }}>my.textmagic.com → API Keys</a>. Saved on this device only.
-                  </div>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={saveTM} style={{ flex: 1, padding: '9px', borderRadius: 8, border: 'none', background: '#0b7a4a', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
-                      {tmSaved ? '✅ Saved!' : 'Save Credentials'}
-                    </button>
-                    <button onClick={testTM} style={{ padding: '9px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-main)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
-                      Test Connection
-                    </button>
-                  </div>
+                <div style={{ fontSize: 13, color: 'var(--text-light)', lineHeight: 1.6 }}>
+                  Text messages are now sent securely through the Caravana server. 
+                  <br /><br />
+                  Individual device setup is <strong>no longer required</strong>. API keys are managed safely in the Vercel Dashboard.
                 </div>
               </div>
 
