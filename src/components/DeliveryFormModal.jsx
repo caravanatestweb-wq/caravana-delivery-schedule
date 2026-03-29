@@ -62,6 +62,7 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, o
   const [isUploading, setIsUploading] = useState(false);
   const [teamMembers, setTeamMembers] = useState([]);
   const [otherSource, setOtherSource] = useState('');
+  const [showPrepPreview, setShowPrepPreview] = useState(false);
 
   const TIME_WINDOWS = [
     '08:00 AM - 10:00 AM','10:00 AM - 12:00 PM',
@@ -176,6 +177,62 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, o
   };
 
   const trialDate = formData.date ? fmtDate(addDays(formData.date, 7)) : '';
+
+  const renderSmsPreview = () => {
+    const firstName = (formData.clientName || '').split(' ')[0] || 'there';
+    const shareUrl = `${window.location.origin}${window.location.pathname}#view=preview&id=${formData.id}`;
+    const msg = `Hi ${firstName}, We're so excited for your delivery — it's almost time! Your new furniture is scheduled to arrive on ${fmtDate(formData.date)}. We want to make sure the experience is smooth and enjoyable.\n\nView Your Visual Delivery Guide & Preparation Tips here:\n${shareUrl}\n\nSee you soon! — The Caravana Family`;
+
+    const handleSend = async (via = 'sms') => {
+      if (via === 'sms') {
+        const { username, apiKey } = { username: localStorage.getItem('tm_username'), apiKey: localStorage.getItem('tm_apikey') };
+        if (username && apiKey && formData.phone) {
+          const clean = formData.phone.replace(/\D/g,'');
+          const e164 = clean.startsWith('1') ? `+${clean}` : `+1${clean}`;
+          try {
+            await fetch('https://rest.textmagic.com/api/v2/messages', {
+              method: 'POST',
+              headers: { 'X-TM-Username': username, 'X-TM-Key': apiKey, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text: msg, phones: e164 }),
+            });
+            alert('✅ Prep Guide sent successfully!');
+            setShowPrepPreview(false);
+          } catch { alert('SMS failed — check TextMagic settings'); }
+        } else {
+          navigator.clipboard?.writeText(msg);
+          alert('📋 Guide message copied! (TextMagic not configured — go to Follow-ups tab → ⚙️ to set up)');
+        }
+      } else {
+        window.open(`mailto:${formData.email}?subject=Your Caravana Furniture Delivery Prep&body=${encodeURIComponent(msg)}`, '_blank');
+      }
+    };
+
+    return (
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+        <div style={{ background: 'var(--surface)', borderRadius: 16, width: '100%', maxWidth: 400, padding: 24, boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}>
+          <h3 style={{ margin: '0 0 16px', fontSize: 18, color: 'var(--text-main)' }}>📱 SMS Prep Invitation</h3>
+          
+          <div style={{ background: '#eef0f7', padding: '12px 16px', borderRadius: '16px 16px 16px 4px', fontSize: 13, lineHeight: 1.6, marginBottom: 20, whiteSpace: 'pre-wrap', color: '#1e293b', border: '1px solid #d1d5db' }}>
+            {msg}
+          </div>
+
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button className="btn-primary" style={{ flex: 1, padding: '12px', borderRadius: 10 }} onClick={() => handleSend('sms')}>
+              🚀 Send Now
+            </button>
+            <button className="btn-secondary" style={{ flex: 1, padding: '12px', borderRadius: 10 }} onClick={() => setShowPrepPreview(false)}>
+              Cancel
+            </button>
+          </div>
+          {formData.email && (
+            <button className="btn-secondary" style={{ width: '100%', marginTop: 10, padding: '10px', borderRadius: 10 }} onClick={() => handleSend('email')}>
+              ✉️ Send via Email Instead
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
@@ -534,68 +591,56 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, o
             )}
 
 
-            {/* Receipt / Acknowledgment — for delivered orders with contact info */}
-            {(formData.status === 'Delivered' || formData.completedAt) && (formData.phone || formData.email) && (
-              <button type="button" className="btn-secondary"
-                style={{ color: '#7c3aed', borderColor: '#7c3aed' }}
-                onClick={() => {
-                  const firstName = (formData.clientName || '').split(' ')[0] || 'there';
-                  const itemList = (formData.items || []).filter(it => it.description).map(it =>
-                    `${it.itemNumber ? it.itemNumber + ' — ' : ''}${it.description}${it.qty && it.qty !== '1' ? ` (×${it.qty})` : ''}`
-                  );
-                  const msg = `Hi ${firstName}! Thank you for choosing Caravana Furniture${formData.orderNumber ? ` (Order ${formData.orderNumber})` : ''}. Your delivery is complete!\n\n📦 Items Delivered:\n${itemList.map((it,i) => `${i+1}. ${it}`).join('\n')}${formData.trialEnabled && formData.trialExpires ? `\n\n⏰ 7-Day Trial expires: ${fmtDate(formData.trialExpires)}` : ''}\n\nThank you! — The Caravana Family 📞 (562) 432-0562`;
-                  if (formData.phone) {
-                    const { username, apiKey } = { username: localStorage.getItem('tm_username'), apiKey: localStorage.getItem('tm_apikey') };
-                    if (username && apiKey) {
-                      const clean = formData.phone.replace(/\D/g,'');
-                      const e164 = clean.startsWith('1') ? `+${clean}` : `+1${clean}`;
-                      fetch('https://rest.textmagic.com/api/v2/messages', {
-                        method: 'POST',
-                        headers: { 'X-TM-Username': username, 'X-TM-Key': apiKey, 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ text: msg, phones: e164 }),
-                      }).then(() => alert('✅ Receipt SMS sent!')).catch(() => alert('SMS failed — check TextMagic settings'));
-                    } else {
-                      navigator.clipboard?.writeText(msg);
-                      alert('📋 Receipt copied! (TextMagic not configured — go to Follow-ups tab → ⚙️ to set up)');
-                    }
-                  }
-                  if (formData.email) {
-                    window.open(`mailto:${formData.email}?subject=Your Caravana Furniture Delivery Receipt&body=${encodeURIComponent(msg)}`, '_blank');
-                  }
-                }}
-              >
-                📧 Send Receipt
-              </button>
-            )}
+            {/* ── Hub Actions ── */}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginRight: 'auto' }}>
+              {delivery && (
+                <>
+                  {/* Prep Invitation - for scheduled orders with contact info */}
+                  {(formData.status !== 'Delivered' && formData.status !== 'Completed') && (formData.phone || formData.email) && (
+                    <button type="button" className="btn-secondary"
+                      style={{ color: '#7c3aed', borderColor: '#7c3aed' }}
+                      onClick={() => setShowPrepPreview(true)}
+                    >
+                      📱 Send Prep Guide
+                    </button>
+                  )}
 
-            {/* Packing List / Experience Guide — always available for scheduled/in-progress */}
-            {delivery && (
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button type="button" className="btn-secondary"
-                  title="Compact list for warehouse pull team"
-                  style={{ color: '#666', borderColor: '#ddd' }}
-                  onClick={() => {
-                    window.dispatchEvent(new CustomEvent('print-packing-list', { detail: { delivery: formData, mode: 'warehouse' } }));
-                  }}
-                >
-                  🖨️ Warehouse List
-                </button>
-                <button type="button" className="btn-secondary"
-                  title="Visual Editorial Guide for the Client"
-                  style={{ color: '#0b7a4a', borderColor: '#0b7a4a' }}
-                  onClick={() => {
-                    // Copy link to clipboard
-                    const shareUrl = `${window.location.origin}${window.location.pathname}#view=preview&id=${formData.id}`;
-                    navigator.clipboard?.writeText(shareUrl);
-                    alert('📋 Client Preview Link copied to clipboard!\n\nYou can now text this link to the customer.');
-                    // Also open the preview for the user to see
-                    window.dispatchEvent(new CustomEvent('print-packing-list', { detail: { delivery: formData, mode: 'client' } }));
-                  }}
-                >
-                  📱 Share Client Guide
-                </button>
-              </div>
-            )}
+                  {/* Receipt / Acknowledgment - for delivered orders */}
+                  {(formData.status === 'Delivered' || formData.completedAt) && (formData.phone || formData.email) && (
+                    <button type="button" className="btn-secondary"
+                      style={{ color: '#0b7a4a', borderColor: '#0b7a4a' }}
+                      onClick={() => {
+                        const firstName = (formData.clientName || '').split(' ')[0] || 'there';
+                        const itemList = (formData.items || []).filter(it => it.description).map(it =>
+                          `${it.itemNumber ? it.itemNumber + ' — ' : ''}${it.description}${it.qty && it.qty !== '1' ? ` (×${it.qty})` : ''}`
+                        );
+                        const msg = `Hi ${firstName}! Thank you for choosing Caravana Furniture${formData.orderNumber ? ` (Order ${formData.orderNumber})` : ''}. Your delivery is complete!\n\n📦 Items Delivered:\n${itemList.map((it,i) => `${i+1}. ${it}`).join('\n')}${formData.trialEnabled && formData.trialExpires ? `\n\n⏰ 7-Day Trial expires: ${fmtDate(formData.trialExpires)}` : ''}\n\nThank you! — The Caravana Family 📞 (562) 432-0562`;
+                        if (formData.phone) {
+                          const { username, apiKey } = { username: localStorage.getItem('tm_username'), apiKey: localStorage.getItem('tm_apikey') };
+                          if (username && apiKey) {
+                            const clean = formData.phone.replace(/\D/g,'');
+                            const e164 = clean.startsWith('1') ? `+${clean}` : `+1${clean}`;
+                            fetch('https://rest.textmagic.com/api/v2/messages', {
+                              method: 'POST',
+                              headers: { 'X-TM-Username': username, 'X-TM-Key': apiKey, 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ text: msg, phones: e164 }),
+                            }).then(() => alert('✅ Receipt SMS sent!')).catch(() => alert('SMS failed — check TextMagic settings'));
+                          } else {
+                            navigator.clipboard?.writeText(msg);
+                            alert('📋 Receipt copied! (TextMagic not configured — go to Follow-ups tab → ⚙️ to set up)');
+                          }
+                        }
+                        if (formData.email) {
+                          window.open(`mailto:${formData.email}?subject=Your Caravana Furniture Delivery Receipt&body=${encodeURIComponent(msg)}`, '_blank');
+                        }
+                      }}
+                    >
+                      📧 Send Receipt
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
 
             <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
             <button type="submit" className="btn-primary">
@@ -603,6 +648,7 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, o
             </button>
           </div>
         </form>
+        {showPrepPreview && renderSmsPreview()}
       </div>
     </div>
   );

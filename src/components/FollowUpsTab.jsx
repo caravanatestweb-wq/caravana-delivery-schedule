@@ -22,6 +22,9 @@ const REVIEW_MSG = (firstName) =>
 const RECEIPT_MSG = (firstName, items = [], orderNumber = '') =>
   `Hi ${firstName}! Thank you for choosing Caravana Furniture${orderNumber ? ` (Order ${orderNumber})` : ''}. Your delivery has been completed. Here's a summary of what was delivered:\n\n${items.map((it, i) => `${i + 1}. ${it}`).join('\n')}\n\nIf you have any questions about your purchase, please call (562) 432-0562. Thank you! — The Caravana Family`;
 
+const PREP_MSG = (firstName, date, shareUrl) =>
+  `Hi ${firstName}, We're so excited for your delivery — it's almost time! Your new furniture is scheduled to arrive on ${fmtDate(date)}. We want to make sure the experience is smooth and enjoyable.\n\nView Your Visual Delivery Guide & Preparation Tips here:\n${shareUrl}\n\nSee you soon! — The Caravana Family`;
+
 export default function FollowUpsTab({ deliveries, updateDelivery }) {
   const today = localDate();
   const [sending, setSending] = useState(null);
@@ -31,6 +34,7 @@ export default function FollowUpsTab({ deliveries, updateDelivery }) {
   const hasCredentials = !!(localStorage.getItem('tm_username') && localStorage.getItem('tm_apikey'));
 
   const typeConfig = {
+    prep:   { label: 'Prep Guide', color: '#7c3aed', bg: '#f5f3ff', badgeLabel: '📱 Prep Invitation' },
     day1:   { label: 'Day 1',    color: '#0b7a4a', bg: '#eef7f0', badgeLabel: '😊 Day 1 Check-in' },
     day3:   { label: 'Day 3–5',  color: '#2563eb', bg: '#eef0f7', badgeLabel: '📋 Trial Reminder' },
     review: { label: 'Review',   color: '#c89b0a', bg: '#fef9ee', badgeLabel: '⭐ Review Request' },
@@ -45,9 +49,17 @@ export default function FollowUpsTab({ deliveries, updateDelivery }) {
     .filter(Boolean)
     .sort((a, b) => a.days - b.days);
 
+  const upcomingPrepItems = deliveries
+    .filter(d => {
+      const days = daysBetween(today, d.date);
+      return days >= 0 && days <= 2 && d.status !== 'Delivered' && d.status !== 'Completed' && !d.prepSent;
+    })
+    .sort((a, b) => a.date.localeCompare(b.date));
+
   const reviewedItems = deliveries.filter(d => d.reviewRequested);
 
   const getFollowUpKey = (type) =>
+    type === 'prep' ? { prepSent: true } :
     type === 'day0' ? { day0Sent: true } :
     type === 'day1' ? { day1Sent: true } :
     type === 'day3' ? { day3Sent: true } :
@@ -82,11 +94,11 @@ export default function FollowUpsTab({ deliveries, updateDelivery }) {
     setSending(null);
   };
 
-  if (followupItems.length === 0 && reviewedItems.length === 0) {
+  if (followupItems.length === 0 && upcomingPrepItems.length === 0 && reviewedItems.length === 0) {
     return (
       <div style={{ textAlign: 'center', padding: '60px 20px' }}>
         <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
-        <div style={{ fontSize: 16, color: 'var(--text-light)' }}>All follow-ups are current!</div>
+        <div style={{ fontSize: 16, color: 'var(--text-light)' }}>All tasks and follow-ups are current!</div>
       </div>
     );
   }
@@ -101,7 +113,90 @@ export default function FollowUpsTab({ deliveries, updateDelivery }) {
           : <span style={{ color: '#c53030', fontWeight: 700 }}>⚠️ Not configured — tap ⚙️ → Integrations to set up</span>}
       </div>
 
-      {/* Follow-up Cards */}
+      {/* Upcoming Prep Guides Section */}
+      {upcomingPrepItems.length > 0 && (
+        <div style={{ marginBottom: 32 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-main)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+            🚀 Upcoming Prep Guides ({upcomingPrepItems.length})
+          </h3>
+          {upcomingPrepItems.map(d => {
+            const firstName = (d.clientName || '').split(' ')[0] || 'there';
+            const shareUrl = `${window.location.origin}${window.location.pathname}#view=preview&id=${d.id}`;
+            const message = PREP_MSG(firstName, d.date, shareUrl);
+            const key = d.id + 'prep';
+            const status = sendStatus[key];
+            const isSending = sending === key;
+            const cfg = typeConfig.prep;
+            const days = daysBetween(today, d.date);
+
+            return (
+              <div key={key} style={{
+                background: 'var(--surface)', borderRadius: 12,
+                borderLeft: `4px solid ${cfg.color}`,
+                padding: '16px 18px', marginBottom: 14,
+                boxShadow: 'var(--shadow-sm)',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text-main)' }}>{d.clientName}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-light)' }}>
+                      Scheduled {fmtDate(d.date)} · {days === 0 ? 'Today' : `In ${days} day${days > 1 ? 's' : ''}`}
+                      {d.phone && <span style={{ marginLeft: 8 }}>📞 {d.phone}</span>}
+                    </div>
+                  </div>
+                  <span style={{ padding: '4px 10px', borderRadius: 12, fontSize: 11, fontWeight: 700, background: cfg.bg, color: cfg.color, flexShrink: 0 }}>
+                    {cfg.badgeLabel}
+                  </span>
+                </div>
+
+                <div style={{
+                  background: 'var(--bg-color)', borderRadius: 8, padding: 12,
+                  fontSize: 12, lineHeight: 1.6, marginBottom: 12,
+                  whiteSpace: 'pre-wrap', color: 'var(--text-main)',
+                  border: '1px solid var(--border)', fontStyle: 'italic',
+                }}>
+                  {message}
+                </div>
+
+                {/* Status feedback */}
+                {status && (
+                  <div style={{
+                    padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, marginBottom: 8,
+                    background: status === 'sent' ? '#eef7f0' : status === 'copied' ? '#eef0f7' : '#fef2f2',
+                    color: status === 'sent' ? '#0b7a4a' : status === 'copied' ? '#2563eb' : '#c53030',
+                  }}>
+                    {status === 'sent' ? '✅ Prep Guide sent & marked!' :
+                     status === 'copied' ? '📋 Guide Link copied to clipboard!' :
+                     `❌ ${status.replace('error:', '')}`}
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button className="btn-primary" style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13 }}
+                    onClick={() => handleSend(d, 'prep', message, true)} disabled={isSending}>
+                    {isSending ? '⏳ Sending...' : '📱 Send Guide SMS'}
+                  </button>
+                  <button className="btn-secondary" style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13 }}
+                    onClick={() => handleSend(d, 'prep', message, false)}>
+                    📋 Copy Link & Mark
+                  </button>
+                  <a href={`sms:${d.phone}?body=${encodeURIComponent(message)}`} className="btn-secondary" style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13, textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center' }}>
+                    💬 SMS App
+                  </a>
+                </div>
+              </div>
+            );
+          })}
+          <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '32px 0 16px' }} />
+        </div>
+      )}
+
+      {/* Follow-up Cards Header */}
+      {followupItems.length > 0 && (
+        <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-main)', marginBottom: 12 }}>
+          🤝 Post-Delivery Follow-ups ({followupItems.length})
+        </h3>
+      )}
       {followupItems.map(({ delivery: d, type, days }) => {
         const firstName = (d.clientName || '').split(' ')[0] || 'there';
         const cfg = typeConfig[type];

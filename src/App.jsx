@@ -402,24 +402,29 @@ function App() {
       <div className="container fade-in">
         {/* ── Main App Header ── */}
         <header className="app-header">
-          <h1 className="app-title">
-            <span>◇</span> Caravana Operations Guide v2
+          <h1 className="app-title" style={{ cursor: 'pointer' }} onClick={() => {
+            setViewRole('office'); setActiveTab('calendar'); setViewMode('weekly'); setCurrentDate(new Date()); setShowArchive(false); window.location.hash = '#role=office&tab=calendar&view=weekly';
+          }}>
+            <span>◇</span> CARAVANA OPS v2
           </h1>
           <div className="version-badge" style={{ fontSize: 10, background: '#eee', padding: '2px 6px', borderRadius: 4, opacity: 0.6 }}>v1.0.9</div>
           <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button className="btn-secondary" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => {
+               setViewRole('office'); setActiveTab('calendar'); setViewMode('weekly'); setCurrentDate(new Date()); setShowArchive(false); window.location.hash = '#role=office&tab=calendar&view=weekly';
+            }}>🏠 Home</button>
             {/* Role Toggle */}
             <div className="role-toggle">
               <button
                 className={`role-tab ${viewRole === 'office' ? 'active' : ''}`}
                 onClick={() => { setViewRole('office'); setActiveTab('calendar'); }}
               >
-                🖥️ Office
+                🖥️ Office HUB
               </button>
               <button
                 className={`role-tab ${viewRole === 'team' ? 'active' : ''}`}
                 onClick={() => setViewRole('team')}
               >
-                🚛 Team
+                🚛 Delivery Team Center
               </button>
             </div>
             {/* Settings gear */}

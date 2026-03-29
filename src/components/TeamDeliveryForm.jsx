@@ -232,9 +232,20 @@ export default function TeamDeliveryForm({ delivery, onBack, updateDelivery }) {
       {showTips && <StylingTipsPanel items={items} onClose={() => setShowTips(false)} />}
 
       {/* Back button */}
-      <button onClick={onBack} style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: '8px 0 16px', display: 'flex', alignItems: 'center', gap: 6 }}>
-        ← Back to Stops
-      </button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <button onClick={onBack} style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: '8px 0', display: 'flex', alignItems: 'center', gap: 6 }}>
+          ← Stops
+        </button>
+        <button
+          className="btn-secondary"
+          style={{ fontSize: 13, padding: '7px 12px', borderRadius: 8, color: '#666', borderColor: '#ddd' }}
+          onClick={() => {
+            window.dispatchEvent(new CustomEvent('print-packing-list', { detail: { delivery, mode: 'warehouse' } }));
+          }}
+        >
+          🖨️ Warehouse Pull List
+        </button>
+      </div>
 
       {/* Client summary */}
       <div style={{ background: 'var(--surface)', borderRadius: 12, padding: '14px 16px', marginBottom: 14, border: '1px solid var(--border)' }}>
