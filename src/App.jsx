@@ -1,5 +1,5 @@
 /* VERSION: 1.0.9-DUAL-LIST */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import WeeklyCalendar from './components/WeeklyCalendar';
 import MonthlyCalendar from './components/MonthlyCalendar';
 import DailyCalendar from './components/DailyCalendar';
@@ -144,6 +144,9 @@ function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
+  const prevTabRef = useRef(activeTab);
+  const prevRoleRef = useRef(viewRole);
+
   // Update hash when state changes
   useEffect(() => {
     const params = new URLSearchParams();
@@ -155,7 +158,13 @@ function App() {
     
     const newHash = '#' + params.toString();
     if (window.location.hash !== newHash) {
-      window.history.pushState(null, '', newHash);
+      if (prevTabRef.current !== activeTab || prevRoleRef.current !== viewRole) {
+        window.history.pushState(null, '', newHash);
+        prevTabRef.current = activeTab;
+        prevRoleRef.current = viewRole;
+      } else {
+        window.history.replaceState(null, '', newHash);
+      }
     }
   }, [viewRole, activeTab, viewMode, currentDate, showArchive]);
 
