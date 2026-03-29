@@ -158,10 +158,6 @@ export default function TeamDeliveryForm({ delivery, onBack, updateDelivery }) {
                     else alert('❌ Failed to send text message.');
                   }).catch(() => alert('Network error sending message.'));
                   
-                  // Also trigger email fallback if email exists
-                  if (delivery.email) {
-                    window.location.href = `mailto:${delivery.email}?subject=Caravana Furniture Delivery Complete&body=${encodeURIComponent(msg)}`;
-                  }
                 }}
                 className="btn-primary"
                 style={{ width: '100%', padding: '13px 40px', fontSize: 16, borderRadius: 12, border: 'none', cursor: 'pointer', background: '#7c3aed', color: '#fff', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 600 }}
