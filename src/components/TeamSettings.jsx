@@ -47,9 +47,13 @@ export default function TeamSettings({ onClose }) {
   const [tmKey, setTmKey]   = useState(localStorage.getItem('tm_apikey')   || '');
   const [tmSaved, setTmSaved] = useState(false);
 
-  const saveTM = () => {
+  const saveTM = async () => {
     localStorage.setItem('tm_username', tmUser.trim());
     localStorage.setItem('tm_apikey',   tmKey.trim());
+    
+    // Globally sync API keys to Supabase
+    await supabase.from('app_settings').upsert({ id: 1, tm_user: tmUser.trim(), tm_key: tmKey.trim() });
+    
     setTmSaved(true);
     setTimeout(() => setTmSaved(false), 2500);
   };
