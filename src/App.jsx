@@ -104,10 +104,15 @@ function App() {
   const [activeTab, setActiveTab] = useState('calendar');
   const [showSettings, setShowSettings] = useState(false);
   const [printingDelivery, setPrintingDelivery] = useState(null);
+  const [printMode, setPrintMode] = useState('warehouse');
+  const [publicPreviewId, setPublicPreviewId] = useState(null);
 
   // ── Print Packing List Event ────────────────────────────────
   useEffect(() => {
-    const handlePrint = (e) => setPrintingDelivery(e.detail);
+    const handlePrint = (e) => {
+      setPrintingDelivery(e.detail.delivery);
+      setPrintMode(e.detail.mode || 'warehouse');
+    };
     window.addEventListener('print-packing-list', handlePrint);
     return () => window.removeEventListener('print-packing-list', handlePrint);
   }, []);
@@ -126,6 +131,11 @@ function App() {
         if (!isNaN(d.getTime())) setCurrentDate(d);
       }
       if (params.has('archive')) setShowArchive(params.get('archive') === 'true');
+      if (params.get('view') === 'preview') {
+        setPublicPreviewId(params.get('id'));
+      } else {
+        setPublicPreviewId(null);
+      }
     };
 
     window.addEventListener('popstate', handlePopState);
@@ -370,6 +380,23 @@ function App() {
 
   const atToday = isToday(currentDate, viewMode);
 
+  // ── Public Preview Rendering ──
+  if (publicPreviewId) {
+    const delivery = deliveries.find(d => d.id === publicPreviewId);
+    if (isLoading) return <div style={{ padding: 100, textAlign: 'center' }}>Loading your delivery preview...</div>;
+    if (!delivery) return <div style={{ padding: 100, textAlign: 'center' }}>Delivery details not found. Please contact Caravana Furniture.</div>;
+    return (
+      <PackingList 
+        delivery={delivery} 
+        mode="client" 
+        onClose={() => {
+          setPublicPreviewId(null);
+          window.location.hash = window.location.hash.replace('view=preview', 'view=weekly');
+        }} 
+      />
+    );
+  }
+
   return (
     <>
       <div className="container fade-in">
@@ -596,6 +623,7 @@ function App() {
       {printingDelivery && (
         <PackingList
           delivery={printingDelivery}
+          mode={printMode}
           onClose={() => setPrintingDelivery(null)}
         />
       )}

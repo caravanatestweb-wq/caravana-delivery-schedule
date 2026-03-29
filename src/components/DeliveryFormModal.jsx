@@ -568,18 +568,33 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, o
               </button>
             )}
 
-            {/* Packing List Print — always available for scheduled/in-progress */}
+            {/* Packing List / Experience Guide — always available for scheduled/in-progress */}
             {delivery && (
-              <button type="button" className="btn-secondary"
-                style={{ color: '#0b7a4a', borderColor: '#0b7a4a' }}
-                onClick={() => {
-                  // We'll use a globally available function or a state in App.jsx
-                  // For now, let's assume we can trigger a print view.
-                  window.dispatchEvent(new CustomEvent('print-packing-list', { detail: formData }));
-                }}
-              >
-                🖨️ Print Packing List
-              </button>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button type="button" className="btn-secondary"
+                  title="Compact list for warehouse pull team"
+                  style={{ color: '#666', borderColor: '#ddd' }}
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent('print-packing-list', { detail: { delivery: formData, mode: 'warehouse' } }));
+                  }}
+                >
+                  🖨️ Warehouse List
+                </button>
+                <button type="button" className="btn-secondary"
+                  title="Visual Editorial Guide for the Client"
+                  style={{ color: '#0b7a4a', borderColor: '#0b7a4a' }}
+                  onClick={() => {
+                    // Copy link to clipboard
+                    const shareUrl = `${window.location.origin}${window.location.pathname}#view=preview&id=${formData.id}`;
+                    navigator.clipboard?.writeText(shareUrl);
+                    alert('📋 Client Preview Link copied to clipboard!\n\nYou can now text this link to the customer.');
+                    // Also open the preview for the user to see
+                    window.dispatchEvent(new CustomEvent('print-packing-list', { detail: { delivery: formData, mode: 'client' } }));
+                  }}
+                >
+                  📱 Share Client Guide
+                </button>
+              </div>
             )}
 
             <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
