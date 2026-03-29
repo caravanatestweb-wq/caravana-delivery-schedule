@@ -1,9 +1,6 @@
 import React from 'react';
 import { fmtDate } from '../lib/constants';
 
-import React from 'react';
-import { fmtDate } from '../lib/constants';
-
 export default function PackingList({ delivery, onClose, mode = 'warehouse' }) {
   const [zoomUrl, setZoomUrl] = React.useState(null);
   
