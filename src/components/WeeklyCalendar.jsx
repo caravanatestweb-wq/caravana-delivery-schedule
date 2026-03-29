@@ -124,7 +124,7 @@ export default function WeeklyCalendar({ deliveries, repairEvents = [], currentD
                     <div
                       key={'r-' + ev.id}
                       className="delivery-card"
-                      onClick={e => { e.stopPropagation(); /* open repairs tab */ }}
+                      onClick={e => { e.stopPropagation(); onSwitchTab('repairs'); }}
                       style={{ borderLeftColor: '#7c3aed', background: '#f5f3ff', cursor: 'pointer' }}
                       title="Repair return"
                     >

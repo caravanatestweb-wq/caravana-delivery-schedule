@@ -51,7 +51,11 @@ export default function MonthlyCalendar({ deliveries, currentDate, onEditDeliver
                   <div
                     key={delivery.id}
                     className={`delivery-card status-${(delivery.status || 'scheduled').toLowerCase()}`}
-                    onClick={(e) => { e.stopPropagation(); onEditDelivery(delivery); }}
+                    onClick={(e) => { 
+                      e.stopPropagation(); 
+                      if (delivery.flagged) onSwitchTab && onSwitchTab('returns');
+                      else onEditDelivery(delivery); 
+                    }}
                     style={{ padding: '0.25rem 0.5rem', marginBottom: '0.25rem', cursor: 'pointer', fontSize: '0.7rem' }}
                   >
                     <div style={{ fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

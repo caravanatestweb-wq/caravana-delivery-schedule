@@ -17,7 +17,7 @@ const timeToMinutes = (timeStr) => {
   return hours * 60 + minutes;
 };
 
-const newItem = () => ({ id: Date.now() + Math.random(), itemNumber: '', description: '', qty: '1' });
+const newItem = () => ({ id: Date.now() + Math.random(), itemNumber: '', description: '', qty: '1', imageUrl: '' });
 
 // Sources where 7-Day Trial does NOT apply by default
 const NO_TRIAL_SOURCES = ['Caravana Outlet', 'LAHSA', 'HACLB'];
@@ -431,6 +431,7 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, o
 
                 {/* Header row */}
                 <div className="items-header">
+                  <span style={{ flex: '0 0 40px' }}>Img</span>
                   <span style={{ flex: '0 0 90px' }}>Item #</span>
                   <span style={{ flex: 1 }}>Description</span>
                   <span style={{ flex: '0 0 55px', textAlign: 'center' }}>Qty</span>
@@ -439,7 +440,22 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, o
 
                 <div className="items-list">
                   {formData.items.map((item, idx) => (
-                    <div key={item.id} className="item-row">
+                    <div key={item.id} className="item-row" style={{ alignItems: 'center' }}>
+                      <label className="item-image-upload" style={{ flex: '0 0 40px', width: 40, height: 40, background: 'var(--bg-color)', borderRadius: 6, border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', fontSize: 18 }}>
+                        <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={async (e) => {
+                          const file = e.target.files[0];
+                          if (!file) return;
+                          setIsUploading(true);
+                          const fileName = `item_${Date.now()}_${file.name.replace(/\s/g, '_')}`;
+                          const { data, error } = await supabase.storage.from('delivery-photos').upload(fileName, file);
+                          if (!error) {
+                            const { data: { publicUrl } } = supabase.storage.from('delivery-photos').getPublicUrl(fileName);
+                            updateItem(item.id, 'imageUrl', publicUrl);
+                          } else alert('Upload error: ' + error.message);
+                          setIsUploading(false);
+                        }} />
+                        {item.imageUrl ? <img src={item.imageUrl} alt="item" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '📷'}
+                      </label>
                       <input
                         type="text"
                         value={item.itemNumber}
@@ -549,6 +565,20 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, o
                 }}
               >
                 📧 Send Receipt
+              </button>
+            )}
+
+            {/* Packing List Print — always available for scheduled/in-progress */}
+            {delivery && (
+              <button type="button" className="btn-secondary"
+                style={{ color: '#0b7a4a', borderColor: '#0b7a4a' }}
+                onClick={() => {
+                  // We'll use a globally available function or a state in App.jsx
+                  // For now, let's assume we can trigger a print view.
+                  window.dispatchEvent(new CustomEvent('print-packing-list', { detail: formData }));
+                }}
+              >
+                🖨️ Print Packing List
               </button>
             )}
 

@@ -11,6 +11,7 @@ import TeamView from './components/TeamView';
 import FollowUpsTab from './components/FollowUpsTab';
 import ReturnsTab from './components/ReturnsTab';
 import TeamSettings from './components/TeamSettings';
+import PackingList from './components/PackingList';
 import { supabase } from './lib/supabaseClient';
 import { localDate, getFollowUpType } from './lib/constants';
 import './App.css';
@@ -102,6 +103,51 @@ function App() {
   const [viewRole, setViewRole] = useState('office');
   const [activeTab, setActiveTab] = useState('calendar');
   const [showSettings, setShowSettings] = useState(false);
+  const [printingDelivery, setPrintingDelivery] = useState(null);
+
+  // ── Print Packing List Event ────────────────────────────────
+  useEffect(() => {
+    const handlePrint = (e) => setPrintingDelivery(e.detail);
+    window.addEventListener('print-packing-list', handlePrint);
+    return () => window.removeEventListener('print-packing-list', handlePrint);
+  }, []);
+
+  // ── Navigation & History Sync ────────────────────────────────
+  useEffect(() => {
+    const handlePopState = () => {
+      const hash = window.location.hash.replace('#', '');
+      const params = new URLSearchParams(hash);
+      
+      if (params.has('role')) setViewRole(params.get('role'));
+      if (params.has('tab')) setActiveTab(params.get('tab'));
+      if (params.has('view')) setViewMode(params.get('view'));
+      if (params.has('date')) {
+        const d = new Date(params.get('date') + 'T12:00:00');
+        if (!isNaN(d.getTime())) setCurrentDate(d);
+      }
+      if (params.has('archive')) setShowArchive(params.get('archive') === 'true');
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    // Initial sync
+    handlePopState();
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Update hash when state changes
+  useEffect(() => {
+    const params = new URLSearchParams();
+    params.set('role', viewRole);
+    params.set('tab', activeTab);
+    params.set('view', viewMode);
+    params.set('date', getLocalDateString(currentDate));
+    if (showArchive) params.set('archive', 'true');
+    
+    const newHash = '#' + params.toString();
+    if (window.location.hash !== newHash) {
+      window.history.pushState(null, '', newHash);
+    }
+  }, [viewRole, activeTab, viewMode, currentDate, showArchive]);
 
   // 1. Initial Load from Supabase
   useEffect(() => {
@@ -429,6 +475,15 @@ function App() {
                     if (key === 'followups') setActiveTab('followups');
                     else if (key === 'returns') setActiveTab('returns');
                     else if (key === 'repairs') setActiveTab('repairs');
+                    else if (key === 'today') {
+                      setActiveTab('calendar');
+                      setViewMode('daily');
+                      setCurrentDate(new Date());
+                    }
+                    else if (key === 'active') {
+                      setActiveTab('calendar');
+                      // Potentially filter for active? For now just go to calendar.
+                    }
                     else setActiveTab('calendar');
                   }}
                 />
@@ -488,9 +543,9 @@ function App() {
                       </button>
                     </div>
                     <main>
-                      {viewMode === 'daily' && <DailyCalendar deliveries={liveDeliveries} repairEvents={repairs.filter(r => r.returnDate)} currentDate={currentDate} onEditDelivery={handleEditDelivery} onNewFromSlot={handleNewFromSlot} onPrev={handlePrev} onNext={handleNext} />}
-                      {viewMode === 'weekly' && <WeeklyCalendar deliveries={liveDeliveries} repairEvents={repairs.filter(r => r.returnDate)} currentDate={currentDate} onEditDelivery={handleEditDelivery} onNewFromSlot={handleNewFromSlot} onPrev={handlePrev} onNext={handleNext} />}
-                      {viewMode === 'monthly' && <MonthlyCalendar deliveries={liveDeliveries} repairEvents={repairs.filter(r => r.returnDate)} currentDate={currentDate} onEditDelivery={handleEditDelivery} onNewFromSlot={handleNewFromSlot} onPrev={handlePrev} onNext={handleNext} />}
+                      {viewMode === 'daily' && <DailyCalendar deliveries={liveDeliveries} repairEvents={repairs.filter(r => r.returnDate)} currentDate={currentDate} onEditDelivery={handleEditDelivery} onNewFromSlot={handleNewFromSlot} onPrev={handlePrev} onNext={handleNext} onSwitchTab={setActiveTab} />}
+                      {viewMode === 'weekly' && <WeeklyCalendar deliveries={liveDeliveries} repairEvents={repairs.filter(r => r.returnDate)} currentDate={currentDate} onEditDelivery={handleEditDelivery} onNewFromSlot={handleNewFromSlot} onPrev={handlePrev} onNext={handleNext} onSwitchTab={setActiveTab} />}
+                      {viewMode === 'monthly' && <MonthlyCalendar deliveries={liveDeliveries} repairEvents={repairs.filter(r => r.returnDate)} currentDate={currentDate} onEditDelivery={handleEditDelivery} onNewFromSlot={handleNewFromSlot} onPrev={handlePrev} onNext={handleNext} onSwitchTab={setActiveTab} />}
                     </main>
                   </>
                 )}
@@ -537,6 +592,13 @@ function App() {
         repair={editingRepair}
         teamMembers={teamMembers}
       />
+
+      {printingDelivery && (
+        <PackingList
+          delivery={printingDelivery}
+          onClose={() => setPrintingDelivery(null)}
+        />
+      )}
     </>
   );
 }

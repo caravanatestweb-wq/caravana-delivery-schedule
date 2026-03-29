@@ -202,7 +202,8 @@ export default function DailyCalendar({ deliveries, repairEvents = [], currentDa
             return (
               <div key={'r-' + repair.id}
                 className="delivery-block"
-                style={{ top: `${indices.start * SLOT_HEIGHT}px`, height: `${Math.max((indices.end - indices.start) * SLOT_HEIGHT, 60)}px`, zIndex: 5, background: '#f5f3ff', borderLeft: '4px solid #7c3aed' }}
+                onClick={() => onSwitchTab && onSwitchTab('repairs')}
+                style={{ top: `${indices.start * SLOT_HEIGHT}px`, height: `${Math.max((indices.end - indices.start) * SLOT_HEIGHT, 60)}px`, zIndex: 5, background: '#f5f3ff', borderLeft: '4px solid #7c3aed', cursor: 'pointer' }}
               >
                 <div className="delivery-block-content">
                   <div className="delivery-block-time" style={{ color: '#7c3aed' }}>🔧 {repair.returnTimeWindow}</div>
