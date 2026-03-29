@@ -17,6 +17,7 @@ export default function ETAPanel({ delivery, onClose }) {
   const [sentStatus, setSentStatus] = useState(null);
 
   const cur = STATUSES.find(s => s.v === status) || STATUSES[1];
+  const firstName = (delivery.clientName || 'there').split(' ')[0];
   const message = useMemo(() => 
     `Hi ${firstName}, ${cur.msg} Estimated arrival: ~${minutes} minutes.${delivery.deliveryTeam ? ` Team: ${delivery.deliveryTeam}.` : ''}${note ? ` Note: ${note}` : ''} — Caravana Furniture`,
     [firstName, cur.msg, minutes, delivery.deliveryTeam, note]
