@@ -160,6 +160,19 @@ function App() {
       setIsLoading(false);
     };
 
+    // Load API Keys globally
+    const loadSettings = async () => {
+      const { data, error } = await supabase.from('app_settings').select('*').limit(1);
+      if (!error && data && data.length > 0) {
+        const settings = data[0];
+        if (settings.tm_user && settings.tm_key) {
+          localStorage.setItem('tm_username', settings.tm_user);
+          localStorage.setItem('tm_apikey', settings.tm_key);
+        }
+      }
+    };
+    loadSettings();
+
     // Also load repairs and team members
     const loadRepairs = async () => {
       const { data } = await supabase.from('repairs').select('*');
@@ -231,8 +244,8 @@ function App() {
   };
 
   const handleSaveDelivery = async (deliveryData) => {
-    const isNew = !deliveryData.id || deliveryData.id.toString().length < 20;
-    const finalId = isNew ? crypto.randomUUID() : deliveryData.id;
+    const isNew = !deliveryData.id;
+    const finalId = isNew ? crypto.randomUUID() : deliveryData.id.toString();
 
     const payload = {
       id: finalId,
@@ -260,6 +273,7 @@ function App() {
       flagReason: deliveryData.flagReason || '',
       flagDate: deliveryData.flagDate || null,
       photoUrls: deliveryData.photoUrls || [],
+      locked: deliveryData.locked || false,
     };
 
     if (isNew) {

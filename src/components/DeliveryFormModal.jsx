@@ -181,7 +181,16 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, o
     <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal-content fade-in">
         <div className="modal-header">
-          <h2 className="modal-title">{delivery ? 'Edit Delivery' : 'New Delivery'}</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <h2 className="modal-title">{delivery ? 'Edit Delivery' : 'New Delivery'}</h2>
+            {delivery && (
+              <button type="button" 
+                onClick={() => setFormData(p => ({ ...p, locked: !p.locked }))}
+                style={{ background: 'transparent', border: '1px solid var(--border)', padding: '3px 8px', borderRadius: 6, fontSize: '0.75rem', cursor: 'pointer', background: formData.locked ? '#fef2f2' : '#f0fdf4', color: formData.locked ? '#c53030' : '#15803d', fontWeight: 600 }}>
+                {formData.locked ? '🔒 Locked' : '🔓 Unlocked'}
+              </button>
+            )}
+          </div>
           <button className="btn-close" onClick={onClose}>&times;</button>
         </div>
 
@@ -485,14 +494,20 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, o
           <div className="modal-footer">
             {delivery && (
               <>
-                <button type="button" className="btn-secondary" style={{ color: '#c53030', borderColor: '#c53030', marginRight: 8 }}
-                  onClick={() => { if (confirm('Mark this delivery for Reschedule?')) onDelete(delivery.id); }}>
-                  Delete
-                </button>
-                <button type="button" className="btn-secondary" style={{ color: '#c89b0a', borderColor: '#c89b0a', marginRight: 'auto' }}
-                  onClick={() => { setFormData(prev => ({ ...prev, status: 'Reschedule' })); alert('Status set to Reschedule. Please pick a NEW DATE above and click Save.'); }}>
-                  🔄 Reschedule
-                </button>
+                {formData.locked ? (
+                  <span style={{ color: '#c53030', fontSize: '0.8rem', marginRight: 'auto', fontWeight: 600 }}>🔒 Locked (Cannot Delete)</span>
+                ) : (
+                  <>
+                    <button type="button" className="btn-secondary" style={{ color: '#c53030', borderColor: '#c53030', marginRight: 8 }}
+                      onClick={() => { if (confirm('Delete this delivery?')) onDelete(delivery.id); }}>
+                      Delete
+                    </button>
+                    <button type="button" className="btn-secondary" style={{ color: '#c89b0a', borderColor: '#c89b0a', marginRight: 'auto' }}
+                      onClick={() => { setFormData(prev => ({ ...prev, status: 'Reschedule' })); alert('Status set to Reschedule. Please pick a NEW DATE above and click Save.'); }}>
+                      🔄 Reschedule
+                    </button>
+                  </>
+                )}
                 {onArchive && (
                   <button type="button" className="btn-secondary"
                     onClick={() => { if (confirm('Archive this delivery?')) { onArchive(delivery.id); onClose(); } }}>
@@ -501,6 +516,7 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, o
                 )}
               </>
             )}
+
 
             {/* Receipt / Acknowledgment — for delivered orders with contact info */}
             {(formData.status === 'Delivered' || formData.completedAt) && (formData.phone || formData.email) && (

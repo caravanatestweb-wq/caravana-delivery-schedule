@@ -130,7 +130,48 @@ export default function TeamDeliveryForm({ delivery, onBack, updateDelivery }) {
               7-Day Trial expires: {fmtDate(addDays(delivery.date || today, 7))}
             </p>
           )}
-          <button onClick={onBack} className="btn-primary" style={{ marginTop: 24, padding: '13px 40px', fontSize: 16, borderRadius: 12, border: 'none', cursor: 'pointer' }}>
+
+          {/* Acknowledgement Text Option */}
+          {delivery.phone && !isReturn && (
+            <div style={{ marginTop: '1.5rem' }}>
+              <button
+                onClick={() => {
+                  const firstName = (delivery.clientName || '').split(' ')[0] || 'there';
+                  const msg = `Hi ${firstName}! Thank you for choosing Caravana Furniture${delivery.orderNumber ? ` (Order ${delivery.orderNumber})` : ''}. Your delivery is complete!\n\nThank you! — The Caravana Family 📞 (562) 432-0562`;
+                  
+                  const username = localStorage.getItem('tm_username');
+                  const apiKey = localStorage.getItem('tm_apikey');
+                  if (!username || !apiKey) {
+                    alert('TextMagic API keys are not configured. Cannot send SMS.');
+                    return;
+                  }
+
+                  const clean = delivery.phone.replace(/\D/g,'');
+                  const e164 = clean.startsWith('1') ? `+${clean}` : `+1${clean}`;
+                  
+                  fetch('https://rest.textmagic.com/api/v2/messages', {
+                    method: 'POST',
+                    headers: { 'X-TM-Username': username, 'X-TM-Key': apiKey, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: msg, phones: e164 })
+                  }).then(res => {
+                    if (res.ok) alert('✅ Text message sent successfully!');
+                    else alert('❌ Failed to send text message.');
+                  }).catch(() => alert('Network error sending message.'));
+                  
+                  // Also trigger email fallback if email exists
+                  if (delivery.email) {
+                    window.location.href = `mailto:${delivery.email}?subject=Caravana Furniture Delivery Complete&body=${encodeURIComponent(msg)}`;
+                  }
+                }}
+                className="btn-primary"
+                style={{ width: '100%', padding: '13px 40px', fontSize: 16, borderRadius: 12, border: 'none', cursor: 'pointer', background: '#7c3aed', color: '#fff', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 600 }}
+              >
+                📱 Send Confirmation SMS
+              </button>
+            </div>
+          )}
+
+          <button onClick={onBack} className="btn-secondary" style={{ width: '100%', padding: '13px 40px', fontSize: 16, borderRadius: 12, cursor: 'pointer', background: 'transparent', border: '1.5px solid var(--border)', color: 'var(--text-main)', fontWeight: 600 }}>
             Back to Stops
           </button>
         </div>
