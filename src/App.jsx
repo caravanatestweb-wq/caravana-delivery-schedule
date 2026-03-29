@@ -1,4 +1,4 @@
-/* VERSION: 1.0.8-OPS-HUB */
+/* VERSION: 1.0.9-DUAL-LIST */
 import { useState, useEffect } from 'react';
 import WeeklyCalendar from './components/WeeklyCalendar';
 import MonthlyCalendar from './components/MonthlyCalendar';
@@ -403,8 +403,9 @@ function App() {
         {/* ── Main App Header ── */}
         <header className="app-header">
           <h1 className="app-title">
-            <span>◇</span> Caravana Operations Hub
+            <span>◇</span> Caravana Operations Guide v2
           </h1>
+          <div className="version-badge" style={{ fontSize: 10, background: '#eee', padding: '2px 6px', borderRadius: 4, opacity: 0.6 }}>v1.0.9</div>
           <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
             {/* Role Toggle */}
             <div className="role-toggle">
