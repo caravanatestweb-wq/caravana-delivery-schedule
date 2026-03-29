@@ -97,7 +97,7 @@ export default function PackingList({ delivery, onClose, mode = 'warehouse', sto
           position: fixed; inset: 0; z-index: 4000; background: rgba(0,0,0,0.9);
           display: flex; alignItems: center; justifyContent: center; cursor: zoom-out;
         }
-        .zoom-overlay img { max-width: 95%; max-height: 95%; }
+        .zoom-overlay img { max-width: 95%; max-height: 95%; object-fit: contain; width: auto; height: auto; }
       `}</style>
 
       {zoomUrl && (
@@ -269,6 +269,13 @@ export default function PackingList({ delivery, onClose, mode = 'warehouse', sto
                         border: '1px solid #ddd', fontSize: 13, background: '#fff' 
                       }} 
                     />
+                  </div>
+                  <div style={{ marginTop: 12, paddingLeft: 40, fontSize: 13, color: '#555', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                    <strong style={{ color: '#000' }}>Pull From:</strong>
+                    <label style={{ cursor: 'pointer' }}><input type="radio" name={`source-${idx}`} style={{ marginRight: 4 }} />Showroom</label>
+                    <label style={{ cursor: 'pointer' }}><input type="radio" name={`source-${idx}`} style={{ marginRight: 4 }} />Outlet Showroom</label>
+                    <label style={{ cursor: 'pointer' }}><input type="radio" name={`source-${idx}`} style={{ marginRight: 4 }} />Warehouse</label>
+                    <label style={{ cursor: 'pointer' }}><input type="radio" name={`source-${idx}`} style={{ marginRight: 4 }} />Vendor Warehouse</label>
                   </div>
                   {pullNotes[idx] && (
                     <div className="print-only" style={{ display: 'none', marginTop: 5, paddingLeft: 40, fontSize: 12, color: '#c53030', fontWeight: 600 }}>

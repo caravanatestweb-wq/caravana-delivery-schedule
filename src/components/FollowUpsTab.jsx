@@ -54,9 +54,9 @@ export default function FollowUpsTab({ deliveries, updateDelivery }) {
       const days = daysBetween(today, d.date);
       return days >= 0 && days <= 2 && d.status !== 'Delivered' && d.status !== 'Completed' && !d.prepSent;
     })
-    .sort((a, b) => a.date.localeCompare(b.date));
+    .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
-  const reviewedItems = deliveries.filter(d => d.reviewRequested);
+  const reviewedItems = deliveries.filter(d => !!d.reviewRequested);
 
   const getFollowUpKey = (type) =>
     type === 'prep' ? { prepSent: true } :
