@@ -4,6 +4,7 @@ import { addDays, fmtDate, localDate, getInspectionList } from '../lib/constants
 import SignaturePad from './SignaturePad';
 import ETAPanel from './ETAPanel';
 import StylingTipsPanel from './StylingTipsPanel';
+import ReceiptTemplate from './ReceiptTemplate';
 
 const LEGAL_TEXT = `The undersigned hereby acknowledges receipt and delivery of the goods described on the annexed list or invoice and further acknowledges that said goods have been inspected and are delivered without damage. Any concealed damages or manufacturing defects must be reported within 24 hours. The customer acknowledges that outside of the approved 7-Day trial items, there are absolutely no cash refunds or exchanges after the merchandise has been received, assembled, or removed from original packaging.
 
@@ -43,6 +44,7 @@ export default function TeamDeliveryForm({ delivery, onBack, updateDelivery }) {
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
   const [completeMode, setCompleteMode] = useState('Delivered');
+  const [generatingPdf, setGeneratingPdf] = useState(false);
 
   // Auto-mark as in-progress when opened
   useEffect(() => {
@@ -137,38 +139,71 @@ export default function TeamDeliveryForm({ delivery, onBack, updateDelivery }) {
             </p>
           )}
 
-          {/* Acknowledgement Text Option */}
+          {/* Acknowledgement PDF Option */}
           {delivery.phone && (!isReturn && completeMode === 'Delivered') && (
             <div style={{ marginTop: '1.5rem' }}>
               <button
-                onClick={() => {
-                  const firstName = (delivery.clientName || '').split(' ')[0] || 'there';
-                  const msg = `Hi ${firstName}! Thank you for choosing Caravana Furniture${delivery.orderNumber ? ` (Order ${delivery.orderNumber})` : ''}. Your delivery is complete!\n\nThank you! — The Caravana Family 📞 (562) 432-0562`;
+                onClick={async () => {
+                  if (generatingPdf) return;
+                  if (!delivery.phone) {
+                    alert('No phone number attached to this delivery.');
+                    return;
+                  }
                   
                   const username = localStorage.getItem('tm_username');
                   const apiKey = localStorage.getItem('tm_apikey');
                   if (!username || !apiKey) {
-                    alert('TextMagic API keys are not configured. Cannot send SMS.');
+                    alert('TextMagic API keys are not configured. Go to Office Area -> Settings to connect TextMagic first.');
                     return;
                   }
 
-                  const clean = delivery.phone.replace(/\D/g,'');
-                  const e164 = clean.startsWith('1') ? `+${clean}` : `+1${clean}`;
-                  
-                  fetch('https://rest.textmagic.com/api/v2/messages', {
-                    method: 'POST',
-                    headers: { 'X-TM-Username': username, 'X-TM-Key': apiKey, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: msg, phones: e164 })
-                  }).then(res => {
-                    if (res.ok) alert('✅ Text message sent successfully!');
-                    else alert('❌ Failed to send text message.');
-                  }).catch(() => alert('Network error sending message.'));
-                  
+                  setGeneratingPdf(true);
+                  try {
+                    const element = document.getElementById('receipt-pdf-template');
+                    if (!element) throw new Error("Template not found");
+                    
+                    const opt = {
+                      margin:       0, // Use zero margin so our custom CSS margins stick perfectly
+                      filename:     `receipt-${delivery.orderNumber || delivery.id}.pdf`,
+                      image:        { type: 'jpeg', quality: 0.98 },
+                      html2canvas:  { scale: 2, useCORS: true },
+                      jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+                    };
+
+                    const pdfBlob = await window.html2pdf().from(element).set(opt).output('blob');
+
+                    // Note: ensure 'receipts' folder works or just place in root of 'delivery-photos'
+                    const path = `receipts/${delivery.id}-${Date.now()}.pdf`;
+                    const { error } = await supabase.storage.from('delivery-photos').upload(path, pdfBlob, { contentType: 'application/pdf', upsert: true });
+                    if (error) throw error;
+                    
+                    const { data: { publicUrl } } = supabase.storage.from('delivery-photos').getPublicUrl(path);
+
+                    const firstName = (delivery.clientName || '').split(' ')[0] || 'there';
+                    const msg = `Hi ${firstName}! Thank you for choosing Caravana Furniture. Your delivery is complete!\n\nYou can view and download your signed Delivery Acknowledgement securely here: ${publicUrl}\n\nAny questions? 📞 (562) 432-0562`;
+
+                    const clean = delivery.phone.replace(/\D/g,'');
+                    const e164 = clean.startsWith('1') ? `+${clean}` : `+1${clean}`;
+                    
+                    const res = await fetch('https://rest.textmagic.com/api/v2/messages', {
+                      method: 'POST',
+                      headers: { 'X-TM-Username': username, 'X-TM-Key': apiKey, 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ text: msg, phones: e164 })
+                    });
+                    if (!res.ok) throw new Error('Failed to send text via TextMagic API');
+                    
+                    alert('✅ Acknowledgement PDF generated and texted successfully!');
+                  } catch (err) {
+                    console.error(err);
+                    alert('❌ Error: ' + err.message);
+                  }
+                  setGeneratingPdf(false);
                 }}
                 className="btn-primary"
-                style={{ width: '100%', padding: '13px 40px', fontSize: 16, borderRadius: 12, border: 'none', cursor: 'pointer', background: '#7c3aed', color: '#fff', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 600 }}
+                disabled={generatingPdf}
+                style={{ width: '100%', padding: '13px 40px', fontSize: 16, borderRadius: 12, border: 'none', cursor: generatingPdf ? 'not-allowed' : 'pointer', background: generatingPdf ? '#999' : '#0b7a4a', color: '#fff', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 600 }}
               >
-                📱 Send Confirmation SMS
+                {generatingPdf ? '⏳ Generating PDF & Sending...' : '📄 Send PDF Acknowledgement'}
               </button>
             </div>
           )}
@@ -176,6 +211,11 @@ export default function TeamDeliveryForm({ delivery, onBack, updateDelivery }) {
           <button onClick={onBack} className="btn-secondary" style={{ width: '100%', padding: '13px 40px', fontSize: 16, borderRadius: 12, cursor: 'pointer', background: 'transparent', border: '1.5px solid var(--border)', color: 'var(--text-main)', fontWeight: 600 }}>
             Back to Stops
           </button>
+        </div>
+        
+        {/* Hidden area to render the HTML template cleanly off-screen */}
+        <div style={{ position: 'absolute', left: '-9999px', top: 0, opacity: 0, pointerEvents: 'none' }}>
+           <ReceiptTemplate delivery={{...delivery, items, printName, signDate, signatureUrl}} />
         </div>
       </div>
     );
