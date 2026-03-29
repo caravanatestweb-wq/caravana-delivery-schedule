@@ -46,6 +46,10 @@ export default function TeamDeliveryForm({ delivery, onBack, updateDelivery }) {
   const [completeMode, setCompleteMode] = useState('Delivered');
   const [generatingPdf, setGeneratingPdf] = useState(false);
 
+  const firstName = (delivery.clientName || '').split(' ')[0] || 'there';
+  const defaultSmsMsg = `Hi ${firstName}, this is Caravana Furniture. Your delivery is complete! 🎉\n\nYou can securely view and download your signed Delivery Acknowledgement here:\n{{RECEIPT_LINK}}\n\nAny questions? 📞 (562) 432-0562`;
+  const [smsMsg, setSmsMsg] = useState(defaultSmsMsg);
+
   // Auto-mark as in-progress when opened
   useEffect(() => {
     if (delivery.status === 'Scheduled' || delivery.status === 'Contacted' || delivery.status === 'Ready') {
@@ -141,7 +145,14 @@ export default function TeamDeliveryForm({ delivery, onBack, updateDelivery }) {
 
           {/* Acknowledgement PDF Option */}
           {delivery.phone && (!isReturn && completeMode === 'Delivered') && (
-            <div style={{ marginTop: '1.5rem' }}>
+            <div style={{ marginTop: '1.5rem', textAlign: 'left' }}>
+              <label style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-main)', marginBottom: 8, display: 'block' }}>Customize SMS Message:</label>
+              <textarea
+                value={smsMsg}
+                onChange={e => setSmsMsg(e.target.value)}
+                rows={6}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid var(--border)', fontSize: 14, fontFamily: 'inherit', marginBottom: 14, resize: 'none', background: 'var(--surface)', color: 'var(--text-main)', boxSizing: 'border-box' }}
+              />
               <button
                 onClick={async () => {
                   if (generatingPdf) return;
@@ -179,8 +190,7 @@ export default function TeamDeliveryForm({ delivery, onBack, updateDelivery }) {
                     
                     const { data: { publicUrl } } = supabase.storage.from('delivery-photos').getPublicUrl(path);
 
-                    const firstName = (delivery.clientName || '').split(' ')[0] || 'there';
-                    const msg = `Hi ${firstName}! Thank you for choosing Caravana Furniture. Your delivery is complete!\n\nYou can view and download your signed Delivery Acknowledgement securely here: ${publicUrl}\n\nAny questions? 📞 (562) 432-0562`;
+                    const finalMsg = smsMsg.replace('{{RECEIPT_LINK}}', publicUrl);
 
                     const clean = delivery.phone.replace(/\D/g,'');
                     const e164 = clean.startsWith('1') ? `+${clean}` : `+1${clean}`;
@@ -188,7 +198,7 @@ export default function TeamDeliveryForm({ delivery, onBack, updateDelivery }) {
                     const res = await fetch('https://rest.textmagic.com/api/v2/messages', {
                       method: 'POST',
                       headers: { 'X-TM-Username': username, 'X-TM-Key': apiKey, 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ text: msg, phones: e164 })
+                      body: JSON.stringify({ text: finalMsg, phones: e164 })
                     });
                     if (!res.ok) throw new Error('Failed to send text via TextMagic API');
                     
