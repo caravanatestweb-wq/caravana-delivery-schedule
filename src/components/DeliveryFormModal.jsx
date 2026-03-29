@@ -168,7 +168,7 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, o
     onSave({
       ...formData,
       source: finalSource,
-      id: formData.id || Date.now().toString(),
+      id: formData.id || null, // Allow App.jsx to handle final ID generation (isNew vs update)
       timeWindow: finalTimeWindow,
       items: formData.items.filter(it => it.description.trim() || it.itemNumber.trim()),
       trialExpires: formData.trialEnabled && formData.date ? addDays(formData.date, 7) : null,
