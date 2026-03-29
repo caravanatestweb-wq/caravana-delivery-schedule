@@ -454,3 +454,18 @@
   justify-content: center;
   padding: 0 4px;
 }
+
+/* ── Mobile Layout Fixes ── */
+@media (max-width: 768px) {
+  .cal-nav-bar {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .cal-date-select {
+    min-width: 0;
+    font-size: 0.85rem;
+  }
+  .cal-jump-date {
+    display: none; /* Hide date picker icon on small screens to save space */
+  }
+}

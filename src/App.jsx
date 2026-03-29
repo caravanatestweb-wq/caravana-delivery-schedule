@@ -327,9 +327,8 @@ function App() {
       <div className="container fade-in">
         {/* ── Main App Header ── */}
         <header className="app-header">
-          <h1 className="app-title" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <img src="/logo.png" alt="Caravana Logo" style={{ width: 32, height: 32, objectFit: 'contain' }} />
-            <span>Caravana Operations Hub</span>
+          <h1 className="app-title">
+            <span>◇</span> Caravana Operations Hub
           </h1>
           <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
             {/* Role Toggle */}
