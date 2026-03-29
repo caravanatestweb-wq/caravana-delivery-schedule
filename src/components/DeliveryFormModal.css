@@ -1,16 +1,14 @@
+/* ── Modal Overlay & Container ────────────────────────────── */
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.4);
+  inset: 0;
+  background: rgba(0,0,0,0.45);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: flex-start;
   justify-content: center;
   z-index: 1000;
-  padding: 4rem 1rem 2rem 1rem;
+  padding: 1.5rem 1rem;
   overflow-y: auto;
 }
 
@@ -19,44 +17,75 @@
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-xl);
   width: 100%;
+  max-width: 980px;
+  max-height: 90vh; /* Prevents overflow on desktop */
+  overflow-y: auto;  /* Allows scrolling within the modal */
   margin: auto;
   position: relative;
 }
 
 .modal-header {
-  padding: 1.5rem 2rem;
+  padding: 1.25rem 1.75rem;
   border-bottom: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  z-index: 10;
 }
 
 .modal-title {
-  font-size: 1.5rem;
+  font-size: 1.35rem;
   font-weight: 700;
   color: var(--text-main);
 }
 
+.btn-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-color);
+  color: var(--text-light);
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+  line-height: 1;
+}
+.btn-close:hover { background: #fef2f2; color: #c53030; }
+
+/* ── Form Layout ────────────────────────────────────────────── */
 .delivery-form {
-  padding: 2rem;
+  padding: 1.5rem 1.75rem;
+}
+
+.form-sections-wrapper {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 2rem;
 }
 
 .section-title {
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: 800;
   color: var(--primary);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 1rem;
-  padding-bottom: 0.5rem;
+  letter-spacing: 0.07em;
+  margin-bottom: 0.9rem;
+  padding-bottom: 0.4rem;
   border-bottom: 2px solid var(--primary-light);
 }
 
 .form-row {
   display: flex;
-  gap: 1.5rem;
+  gap: 1rem;
 }
-
 .form-row > .form-group {
   flex: 1;
 }
@@ -64,24 +93,118 @@
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.4rem;
 }
-
 .form-group label {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 700;
   color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-color);
+  color: var(--text-main);
+  font-size: 0.9rem;
+  font-family: inherit;
+  transition: var(--transition);
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(10, 154, 143, 0.12);
 }
 
+/* ── Source Toggle Buttons ──────────────────────────────────── */
+.source-toggle-btn {
+  flex: 1;
+  padding: 8px 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text-light);
+  transition: var(--transition);
+  font-family: inherit;
+}
+.source-toggle-btn.active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+}
+
+/* ── Trial Toggle Row ────────────────────────────────────────── */
+.trial-toggle-row {
+  padding: 10px 14px;
+  background: var(--bg-color);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+/* ── Items List ──────────────────────────────────────────────── */
+.items-header {
+  display: flex;
+  gap: 6px;
+  padding: 0 0 6px 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 6px;
+}
+
+.items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.item-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.item-input {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-color);
+  color: var(--text-main);
+  font-size: 0.88rem;
+  font-family: inherit;
+  transition: var(--transition);
+}
+.item-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(10, 154, 143, 0.1);
+}
+.item-num  { flex: 0 0 90px; }
+.item-desc { flex: 1; }
+.item-qty  { flex: 0 0 55px; text-align: center; }
+
+/* ── Hour Picker ─────────────────────────────────────────────── */
 .hour-pill-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
 }
-
 .hour-pill {
-  padding: 0.4rem 0.75rem;
-  font-size: 0.75rem;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.78rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--bg-color);
@@ -89,23 +212,17 @@
   transition: var(--transition);
   font-family: inherit;
 }
+.hour-pill:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+.hour-pill.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+.hour-pill:disabled { opacity: 0.3; cursor: not-allowed; text-decoration: line-through; }
 
-.hour-pill:hover:not(:disabled) {
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
-.btn-delete:hover {
-  border-bottom-color: #ef4444;
-}
-
+/* ── Photo Grid ──────────────────────────────────────────────── */
 .photo-preview-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-  gap: 0.75rem;
-  margin-top: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 0.6rem;
+  margin-top: 0.5rem;
 }
-
 .photo-preview-item {
   position: relative;
   aspect-ratio: 1;
@@ -113,122 +230,105 @@
   overflow: hidden;
   border: 1px solid var(--border);
 }
-
-.photo-preview-item img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
+.photo-preview-item img { width: 100%; height: 100%; object-fit: cover; }
 .photo-remove-btn {
   position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 20px;
-  height: 20px;
-  background: rgba(239, 68, 68, 0.9);
-  color: white;
-  border: none;
+  top: 2px; right: 2px;
+  width: 20px; height: 20px;
+  background: rgba(220, 50, 50, 0.9);
+  color: #fff; border: none;
   border-radius: 50%;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 2;
+  font-size: 14px; line-height: 1;
+  cursor: pointer; z-index: 2;
+  display: flex; align-items: center; justify-content: center;
 }
-
-.photo-placeholder {
-  grid-column: 1 / -1;
-  padding: 1.5rem;
-  background: var(--bg-color);
-  border: 1px dashed var(--border);
+.photo-upload-btn {
+  aspect-ratio: 1;
   border-radius: var(--radius-sm);
-  text-align: center;
-  color: var(--text-light);
-  font-size: 0.85rem;
+  border: 2px dashed var(--border);
+  background: var(--bg-color);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  cursor: pointer; gap: 3px;
+  font-size: 1.4rem;
+  transition: var(--transition);
 }
+.photo-upload-btn span { font-size: 0.7rem; color: var(--text-light); }
+.photo-upload-btn:hover { border-color: var(--primary); }
 
-.hour-pill.active {
-  background: var(--primary);
-  color: white;
-  border-color: var(--primary);
-}
-
-.hour-pill:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-  background: var(--border-light);
-  text-decoration: line-through;
-}
-
+/* ── Footer ──────────────────────────────────────────────────── */
 .modal-footer {
-  padding-top: 2rem;
+  padding: 1.25rem 1.75rem;
   border-top: 1px solid var(--border);
   display: flex;
   justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 2rem;
+  gap: 0.75rem;
+  align-items: center;
+  margin-top: 1.5rem;
 }
 
-.btn-sm {
-  padding: 0.45rem 0.75rem;
-  font-size: 0.8rem;
-}
+.btn-sm { padding: 0.4rem 0.7rem; font-size: 0.82rem; }
 
-@media (max-width: 850px) {
+/* ── Mobile Responsive ───────────────────────────────────────── */
+@media (max-width: 700px) {
   .modal-overlay {
-    padding: 1rem 0.5rem;
-    align-items: flex-start;
-  }
-  
-  .modal-header {
-    padding: 1rem;
+    padding: 0;
+    align-items: flex-end;
   }
 
-  .modal-title {
-    font-size: 1.25rem;
+  .modal-content {
+    border-radius: 20px 20px 0 0;
+    max-height: 92vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .modal-header {
+    border-radius: 20px 20px 0 0;
+    padding: 1rem 1.25rem;
   }
 
   .delivery-form {
-    padding: 1rem;
+    padding: 1rem 1.25rem;
   }
 
   .form-sections-wrapper {
     grid-template-columns: 1fr !important;
-    gap: 1.5rem !important;
+    gap: 0;
   }
+
+  .form-left-col { order: 1; }
+  .form-right-col { order: 2; margin-top: 1.5rem; }
 
   .form-row {
     flex-direction: column;
-    gap: 1rem;
+    gap: 0.75rem;
   }
 
-  .form-group input, 
-  .form-group select, 
+  .form-group input,
+  .form-group select,
   .form-group textarea {
-    padding: 0.8rem; /* Larger touch targets */
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--text-main);
+    font-size: 16px; /* prevents iOS zoom */
+    padding: 0.75rem;
   }
 
   .hour-pill {
-    padding: 0.75rem 1rem; /* Much larger for mobile fingers */
-    font-size: 0.9rem;
+    padding: 0.65rem 0.9rem;
+    font-size: 0.85rem;
   }
+
+  .items-header { display: none; }
+  .item-row { flex-wrap: wrap; background: var(--bg-color); border-radius: 8px; padding: 8px; gap: 6px; }
+  .item-num  { flex: 0 0 calc(35% - 3px); }
+  .item-qty  { flex: 0 0 calc(15% - 3px); }
+  .item-desc { flex: 1 1 100%; order: -1; }
 
   .modal-footer {
     flex-direction: column-reverse;
-    gap: 0.75rem;
-    padding: 1.5rem 1rem;
+    padding: 1rem 1.25rem 1.5rem;
+    gap: 0.5rem;
   }
-
   .modal-footer .btn-primary,
-  .modal-footer .btn-secondary {
-    width: 100%;
-    padding: 1rem;
-    justify-content: center;
-  }
+  .modal-footer .btn-secondary { width: 100%; padding: 0.9rem; justify-content: center; }
+  .modal-footer .btn-secondary[style*="c53030"] { margin-right: 0 !important; }
 }

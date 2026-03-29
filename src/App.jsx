@@ -1,10 +1,18 @@
-/* VERSION: 1.0.7-ARCHIVE */
+/* VERSION: 1.0.8-OPS-HUB */
 import { useState, useEffect } from 'react';
 import WeeklyCalendar from './components/WeeklyCalendar';
 import MonthlyCalendar from './components/MonthlyCalendar';
 import DailyCalendar from './components/DailyCalendar';
 import DeliveryFormModal from './components/DeliveryFormModal';
+import RepairFormModal from './components/RepairFormModal';
+import RepairsScheduleTab from './components/RepairsScheduleTab';
+import StatsBar from './components/StatsBar';
+import TeamView from './components/TeamView';
+import FollowUpsTab from './components/FollowUpsTab';
+import ReturnsTab from './components/ReturnsTab';
+import TeamSettings from './components/TeamSettings';
 import { supabase } from './lib/supabaseClient';
+import { localDate, getFollowUpType } from './lib/constants';
 import './App.css';
 
 const getStartOfWeek = (date) => {
@@ -82,11 +90,18 @@ const getLocalDateString = (date = new Date()) => {
 function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [deliveries, setDeliveries] = useState([]);
+  const [repairs, setRepairs] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDelivery, setEditingDelivery] = useState(null);
+  const [isRepairModalOpen, setIsRepairModalOpen] = useState(false);
+  const [editingRepair, setEditingRepair] = useState(null);
+  const [teamMembers, setTeamMembers] = useState([]);
   const [viewMode, setViewMode] = useState('weekly');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showArchive, setShowArchive] = useState(false);
+  const [viewRole, setViewRole] = useState('office');
+  const [activeTab, setActiveTab] = useState('calendar');
+  const [showSettings, setShowSettings] = useState(false);
 
   // 1. Initial Load from Supabase
   useEffect(() => {
@@ -140,32 +155,31 @@ function App() {
           }
         }
         
-        const mapped = (data || []).map(d => ({
-          id: d.id,
-          date: d.date,
-          timeWindow: d.timeWindow,
-          source: d.source,
-          scheduledBy: d.scheduledBy,
-          clientName: d.clientName,
-          address: d.address,
-          phone: d.phone,
-          status: d.status,
-          notes: d.notes,
-          packingList: d.packingList || [],
-          photoUrls: d.photoUrls || []
-        }));
-        setDeliveries(mapped);
+        setDeliveries(data || []);
       }
       setIsLoading(false);
     };
 
-    fetchDeliveries();
+    // Also load repairs and team members
+    const loadRepairs = async () => {
+      const { data } = await supabase.from('repairs').select('*');
+      if (data) setRepairs(data);
+    };
+    const loadTeam = async () => {
+      const { data } = await supabase.from('team_members').select('name').order('name');
+      if (data) setTeamMembers(data.map(m => m.name));
+    };
+    loadRepairs();
+    loadTeam();
 
     // 2. Real-time Subscription
     const channel = supabase
       .channel('schema-db-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'deliveries' }, (payload) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'deliveries' }, () => {
         fetchDeliveries();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'repairs' }, () => {
+        loadRepairs();
       })
       .subscribe();
 
@@ -188,7 +202,32 @@ function App() {
   const handleDeleteDelivery = async (id) => {
     const { error } = await supabase.from('deliveries').delete().eq('id', id);
     if (error) alert("Error deleting: " + error.message);
-    else handleCloseModal();
+    else { setDeliveries(prev => prev.filter(d => d.id !== id)); handleCloseModal(); }
+  };
+
+  // Repair handlers
+  const handleOpenNewRepair = () => { setEditingRepair(null); setIsRepairModalOpen(true); };
+  const handleEditRepair = (r) => { setEditingRepair(r); setIsRepairModalOpen(true); };
+  const handleCloseRepairModal = () => { setIsRepairModalOpen(false); setEditingRepair(null); };
+  const handleSaveRepair = async (repairData) => {
+    const isNew = !repairData.id;
+    const finalId = isNew ? crypto.randomUUID() : repairData.id;
+    const payload = { ...repairData, id: finalId };
+    if (isNew) {
+      const { error } = await supabase.from('repairs').insert([payload]);
+      if (error) { alert('Error saving repair: ' + error.message); return; }
+      setRepairs(prev => [...prev, payload]);
+    } else {
+      const { error } = await supabase.from('repairs').update(payload).eq('id', finalId);
+      if (error) { alert('Error updating repair: ' + error.message); return; }
+      setRepairs(prev => prev.map(r => r.id === finalId ? payload : r));
+    }
+    handleCloseRepairModal();
+  };
+  const handleDeleteRepair = async (id) => {
+    const { error } = await supabase.from('repairs').delete().eq('id', id);
+    if (error) alert('Error deleting repair: ' + error.message);
+    else { setRepairs(prev => prev.filter(r => r.id !== id)); handleCloseRepairModal(); }
   };
 
   const handleSaveDelivery = async (deliveryData) => {
@@ -200,22 +239,37 @@ function App() {
       date: deliveryData.date,
       timeWindow: deliveryData.timeWindow,
       source: deliveryData.source,
-      scheduledBy: deliveryData.scheduledBy,
+      orderSource: deliveryData.orderSource || 'in_store',
+      scheduledBy: deliveryData.scheduledBy || '',
+      deliveryTeam: deliveryData.deliveryTeam || '',
       clientName: deliveryData.clientName,
+      contactName: deliveryData.contactName || '',
       address: deliveryData.address,
       phone: deliveryData.phone,
+      email: deliveryData.email || '',
       status: deliveryData.status,
-      notes: deliveryData.notes,
+      contactStatus: deliveryData.contactStatus || 'Scheduled',
+      notes: deliveryData.notes || '',
+      orderNumber: deliveryData.orderNumber || '',
+      invoiceNumber: deliveryData.invoiceNumber || '',
+      items: deliveryData.items || [],
       packingList: deliveryData.packingList || [],
-      photoUrls: deliveryData.photoUrls || []
+      trialEnabled: deliveryData.trialEnabled !== false,
+      trialExpires: deliveryData.trialExpires || null,
+      flagged: deliveryData.flagged || null,
+      flagReason: deliveryData.flagReason || '',
+      flagDate: deliveryData.flagDate || null,
+      photoUrls: deliveryData.photoUrls || [],
     };
 
     if (isNew) {
       const { error } = await supabase.from('deliveries').insert([payload]);
-      if (error) alert("Error saving: " + error.message);
+      if (error) { alert('Error saving: ' + error.message); return; }
+      setDeliveries(prev => [...prev, payload]);
     } else {
       const { error } = await supabase.from('deliveries').update(payload).eq('id', finalId);
-      if (error) alert("Error updating: " + error.message);
+      if (error) { alert('Error updating: ' + error.message); return; }
+      setDeliveries(prev => prev.map(d => d.id === finalId ? payload : d));
     }
     handleCloseModal();
   };
@@ -248,8 +302,14 @@ function App() {
     a.click(); URL.revokeObjectURL(url);
   };
 
+  const updateDelivery = (id, updates) => {
+    setDeliveries(prev => prev.map(d => d.id === id ? { ...d, ...updates } : d));
+  };
+
   const liveDeliveries = deliveries.filter(d => d.status !== 'Archived');
   const archivedDeliveries = deliveries.filter(d => d.status === 'Archived');
+  const followupCount = liveDeliveries.filter(d => getFollowUpType(d, localDate())).length;
+  const returnsCount = liveDeliveries.filter(d => ['return', 'exchange', 'repair'].includes(d.flagged)).length;
 
   const dateOptions = buildDateOptions(currentDate, viewMode);
   // Find the closest matching option value for the current selection
@@ -270,127 +330,192 @@ function App() {
           <h1 className="app-title">
             <span>◇</span> Caravana Schedule Hub
           </h1>
-          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            {/* Role Toggle */}
+            <div className="role-toggle">
+              <button
+                className={`role-tab ${viewRole === 'office' ? 'active' : ''}`}
+                onClick={() => { setViewRole('office'); setActiveTab('calendar'); }}
+              >
+                🖥️ Office
+              </button>
+              <button
+                className={`role-tab ${viewRole === 'team' ? 'active' : ''}`}
+                onClick={() => setViewRole('team')}
+              >
+                🚛 Team
+              </button>
+            </div>
+            {/* Settings gear */}
             <button
-              className="btn-secondary"
-              style={{ fontSize: '0.85rem' }}
-              onClick={() => setShowArchive(v => !v)}
-            >
-              {showArchive ? '← Live Schedule' : '📦 Archive (' + archivedDeliveries.length + ')'}
-            </button>
-            {showArchive && (
-              <button className="btn-secondary" style={{ fontSize: '0.85rem' }} onClick={handleExportCSV}>
-                ⬇ Export CSV
-              </button>
+              title="Team Settings"
+              onClick={() => setShowSettings(true)}
+              style={{ width: 36, height: 36, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface)', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >⚙️</button>
+            {viewRole === 'office' && !showArchive && (
+              <>
+                <button
+                  className="btn-secondary"
+                  style={{ fontSize: '0.82rem' }}
+                  onClick={() => setShowArchive(v => !v)}
+                >
+                  📦 Archive ({archivedDeliveries.length})
+                </button>
+                <button className="btn-primary" onClick={handleOpenNewModal}>+ New Delivery</button>
+              </>
             )}
-            {!showArchive && (
-              <button className="btn-primary" onClick={handleOpenNewModal}>
-                + New Delivery
-              </button>
+            {viewRole === 'office' && showArchive && (
+              <>
+                <button className="btn-secondary" style={{ fontSize: '0.82rem' }} onClick={() => setShowArchive(false)}>← Live Schedule</button>
+                <button className="btn-secondary" style={{ fontSize: '0.82rem' }} onClick={handleExportCSV}>⬇ Export CSV</button>
+              </>
             )}
           </div>
         </header>
 
-        {/* ── Unified Calendar Nav Bar ── */}
-        <div className="cal-nav-bar">
-          {/* LEFT: view tabs */}
-          <div className="cal-view-tabs">
-            {['daily', 'weekly', 'monthly'].map(v => (
-              <button
-                key={v}
-                className={`cal-tab ${viewMode === v ? 'active' : ''}`}
-                onClick={() => setViewMode(v)}
-              >
-                {v.charAt(0).toUpperCase() + v.slice(1)}
-              </button>
-            ))}
-          </div>
+        {showSettings && <TeamSettings onClose={() => setShowSettings(false)} />}
 
-          {/* CENTER: date dropdown */}
-          <div className="cal-date-picker">
-            <button className="btn-icon cal-nav-arrow" onClick={handlePrev}>‹</button>
-            <select
-              className="cal-date-select"
-              value={currentOptionValue}
-              onChange={handleDropdownChange}
-            >
-              {dateOptions.map(o => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-            <button className="btn-icon cal-nav-arrow" onClick={handleNext}>›</button>
-          </div>
+        {/* ── TEAM MODE ── */}
+        {viewRole === 'team' && (
+          <TeamView deliveries={liveDeliveries} updateDelivery={updateDelivery} />
+        )}
 
-          {/* RIGHT: Today / This Week / This Month button */}
-          <button
-            className={`cal-today-btn ${atToday ? 'at-today' : ''}`}
-            onClick={handleGoToday}
-            disabled={atToday}
-          >
-            {viewMode === 'daily' ? 'Today' : viewMode === 'weekly' ? 'This Week' : 'This Month'}
-          </button>
-        </div>
+        {/* ── OFFICE MODE ── */}
+        {viewRole === 'office' && (
+          <>
+            {/* Archive view */}
+            {showArchive && (
+              <div className="archive-view">
+                <h2 style={{ marginBottom: '1rem', color: 'var(--text-light)', fontSize: '1rem', fontWeight: 600 }}>
+                  📦 {archivedDeliveries.length} Archived Deliveries
+                </h2>
+                {archivedDeliveries.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-light)' }}>No archived deliveries yet.</div>
+                ) : (
+                  <div className="archive-list">
+                    {archivedDeliveries.sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(d => (
+                      <div key={d.id} className="archive-card" onClick={() => handleEditDelivery(d)}>
+                        <div className="archive-card-date">{d.date}</div>
+                        <div className="archive-card-name">{d.clientName}</div>
+                        <div className="archive-card-meta">{d.timeWindow} · {d.source}</div>
+                        {d.scheduledBy && <div className="archive-card-by">by {d.scheduledBy}</div>}
+                        {(d.photoUrls || []).length > 0 && (
+                          <div className="archive-card-photos">
+                            {d.photoUrls.map((url, i) => (
+                              <img key={i} src={url} alt="delivery" className="archive-thumb" onClick={e => { e.stopPropagation(); window.open(url, '_blank'); }} />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
-        {/* ── Calendar Views or Archive ── */}
-        <main>
-          {showArchive ? (
-            <div className="archive-view">
-              <h2 style={{ marginBottom: '1rem', color: 'var(--text-light)', fontSize: '1rem', fontWeight: 600 }}>
-                📦 {archivedDeliveries.length} Archived Deliveries
-              </h2>
-              {archivedDeliveries.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-light)' }}>
-                  No archived deliveries yet. Archive a delivery by setting its status to "Archived".
+            {/* Office tabs + calendar */}
+            {!showArchive && (
+              <>
+                {/* Stats Bar */}
+                <StatsBar
+                  deliveries={liveDeliveries}
+                  repairs={repairs}
+                  followupCount={followupCount}
+                  returnsCount={returnsCount}
+                  activeTab={activeTab}
+                  onTabClick={(key) => {
+                    if (key === 'followups') setActiveTab('followups');
+                    else if (key === 'returns') setActiveTab('returns');
+                    else if (key === 'repairs') setActiveTab('repairs');
+                    else setActiveTab('calendar');
+                  }}
+                />
+
+                {/* Office Tab Bar */}
+                <div className="office-tabs">
+                  <button className={`office-tab ${activeTab === 'calendar' ? 'active' : ''}`} onClick={() => setActiveTab('calendar')}>
+                    📅 Calendar
+                  </button>
+                  <button className={`office-tab ${activeTab === 'followups' ? 'active' : ''}`} onClick={() => setActiveTab('followups')}>
+                    💬 Follow-ups
+                    {followupCount > 0 && <span className="office-tab-badge">{followupCount}</span>}
+                  </button>
+                  <button className={`office-tab ${activeTab === 'returns' ? 'active' : ''}`} onClick={() => setActiveTab('returns')}>
+                    🔄 Returns
+                    {returnsCount > 0 && <span className="office-tab-badge">{returnsCount}</span>}
+                  </button>
+                  <button className={`office-tab ${activeTab === 'repairs' ? 'active' : ''}`} onClick={() => setActiveTab('repairs')}>
+                    🔧 Repairs
+                    {repairs.filter(r => r.status !== 'Returned').length > 0 && (
+                      <span className="office-tab-badge" style={{ background: '#7c3aed' }}>
+                        {repairs.filter(r => r.status !== 'Returned').length}
+                      </span>
+                    )}
+                  </button>
                 </div>
-              ) : (
-                <div className="archive-list">
-                  {archivedDeliveries.sort((a,b) => b.date.localeCompare(a.date)).map(d => (
-                    <div key={d.id} className="archive-card" onClick={() => handleEditDelivery(d)}>
-                      <div className="archive-card-date">{d.date}</div>
-                      <div className="archive-card-name">{d.clientName}</div>
-                      <div className="archive-card-meta">{d.timeWindow} · {d.source}</div>
-                      {d.scheduledBy && <div className="archive-card-by">by {d.scheduledBy}</div>}
-                      {(d.photoUrls||[]).length > 0 && (
-                        <div className="archive-card-photos">
-                          {d.photoUrls.map((url, i) => (
-                            <img key={i} src={url} alt="delivery" className="archive-thumb" onClick={e => { e.stopPropagation(); window.open(url, '_blank'); }} />
-                          ))}
-                        </div>
-                      )}
+
+                {/* Calendar View */}
+                {activeTab === 'calendar' && (
+                  <>
+                    {/* ── Unified Calendar Nav Bar ── */}
+                    <div className="cal-nav-bar">
+                      <div className="cal-view-tabs">
+                        {['daily', 'weekly', 'monthly'].map(v => (
+                          <button key={v} className={`cal-tab ${viewMode === v ? 'active' : ''}`} onClick={() => setViewMode(v)}>
+                            {v.charAt(0).toUpperCase() + v.slice(1)}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="cal-date-picker">
+                        <button className="btn-icon cal-nav-arrow" onClick={handlePrev} title="Previous">‹</button>
+                        <select className="cal-date-select" value={currentOptionValue} onChange={handleDropdownChange}>
+                          {dateOptions.map(o => (<option key={o.value} value={o.value}>{o.label}</option>))}
+                        </select>
+                        <button className="btn-icon cal-nav-arrow" onClick={handleNext} title="Next">›</button>
+                        {/* Jump to date — direct input for speed */}
+                        <input
+                          type="date"
+                          className="cal-jump-date"
+                          value={viewMode === 'daily' ? currentOptionValue : ''}
+                          onChange={e => e.target.value && setCurrentDate(new Date(e.target.value + 'T12:00:00'))}
+                          title="Jump to date"
+                        />
+                      </div>
+                      <button className={`cal-today-btn ${atToday ? 'at-today' : ''}`} onClick={handleGoToday} disabled={atToday}>
+                        {viewMode === 'daily' ? 'Today' : viewMode === 'weekly' ? 'This Week' : 'This Month'}
+                      </button>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ) : (
-            <>
-              {viewMode === 'daily' && (
-                <DailyCalendar
-                  deliveries={liveDeliveries}
-                  currentDate={currentDate}
-                  onEditDelivery={handleEditDelivery}
-                  onNewFromSlot={handleNewFromSlot}
-                />
-              )}
-              {viewMode === 'weekly' && (
-                <WeeklyCalendar
-                  deliveries={liveDeliveries}
-                  currentDate={currentDate}
-                  onEditDelivery={handleEditDelivery}
-                  onNewFromSlot={handleNewFromSlot}
-                />
-              )}
-              {viewMode === 'monthly' && (
-                <MonthlyCalendar
-                  deliveries={liveDeliveries}
-                  currentDate={currentDate}
-                  onEditDelivery={handleEditDelivery}
-                  onNewFromSlot={handleNewFromSlot}
-                />
-              )}
-            </>
-          )}
-        </main>
+                    <main>
+                      {viewMode === 'daily' && <DailyCalendar deliveries={liveDeliveries} repairEvents={repairs.filter(r => r.returnDate)} currentDate={currentDate} onEditDelivery={handleEditDelivery} onNewFromSlot={handleNewFromSlot} onPrev={handlePrev} onNext={handleNext} />}
+                      {viewMode === 'weekly' && <WeeklyCalendar deliveries={liveDeliveries} repairEvents={repairs.filter(r => r.returnDate)} currentDate={currentDate} onEditDelivery={handleEditDelivery} onNewFromSlot={handleNewFromSlot} onPrev={handlePrev} onNext={handleNext} />}
+                      {viewMode === 'monthly' && <MonthlyCalendar deliveries={liveDeliveries} repairEvents={repairs.filter(r => r.returnDate)} currentDate={currentDate} onEditDelivery={handleEditDelivery} onNewFromSlot={handleNewFromSlot} onPrev={handlePrev} onNext={handleNext} />}
+                    </main>
+                  </>
+                )}
+
+                {activeTab === 'followups' && (
+                  <FollowUpsTab deliveries={liveDeliveries} updateDelivery={updateDelivery} />
+                )}
+
+                {activeTab === 'returns' && (
+                  <ReturnsTab
+                    deliveries={liveDeliveries}
+                    updateDelivery={updateDelivery}
+                    onEditDelivery={handleEditDelivery}
+                  />
+                )}
+
+                {activeTab === 'repairs' && (
+                  <RepairsScheduleTab
+                    repairs={repairs}
+                    onNew={handleOpenNewRepair}
+                    onEdit={handleEditRepair}
+                  />
+                )}
+              </>
+            )}
+          </>
+        )}
       </div>
 
       <DeliveryFormModal
@@ -401,6 +526,14 @@ function App() {
         onArchive={handleArchiveDelivery}
         delivery={editingDelivery}
         allDeliveries={deliveries}
+      />
+      <RepairFormModal
+        isOpen={isRepairModalOpen}
+        onClose={handleCloseRepairModal}
+        onSave={handleSaveRepair}
+        onDelete={handleDeleteRepair}
+        repair={editingRepair}
+        teamMembers={teamMembers}
       />
     </>
   );
