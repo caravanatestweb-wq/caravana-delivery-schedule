@@ -485,9 +485,13 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, o
           <div className="modal-footer">
             {delivery && (
               <>
-                <button type="button" className="btn-secondary" style={{ color: '#c53030', borderColor: '#c53030', marginRight: 'auto' }}
-                  onClick={() => { if (confirm('Delete this delivery?')) onDelete(delivery.id); }}>
+                <button type="button" className="btn-secondary" style={{ color: '#c53030', borderColor: '#c53030', marginRight: 8 }}
+                  onClick={() => { if (confirm('Mark this delivery for Reschedule?')) onDelete(delivery.id); }}>
                   Delete
+                </button>
+                <button type="button" className="btn-secondary" style={{ color: '#c89b0a', borderColor: '#c89b0a', marginRight: 'auto' }}
+                  onClick={() => { setFormData(prev => ({ ...prev, status: 'Reschedule' })); alert('Status set to Reschedule. Please pick a NEW DATE above and click Save.'); }}>
+                  🔄 Reschedule
                 </button>
                 {onArchive && (
                   <button type="button" className="btn-secondary"
