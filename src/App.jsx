@@ -402,16 +402,13 @@ function App() {
       <div className="container fade-in">
         {/* ── Main App Header ── */}
         <header className="app-header">
-          <h1 className="app-title" style={{ cursor: 'pointer' }} onClick={() => {
+          <h1 className="app-title" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }} onClick={() => {
             setViewRole('office'); setActiveTab('calendar'); setViewMode('weekly'); setCurrentDate(new Date()); setShowArchive(false); window.location.hash = '#role=office&tab=calendar&view=weekly';
           }}>
-            <span>◇</span> CARAVANA OPS v2
+            <span style={{ fontSize: '1.4rem' }}>🚛</span> Caravana Delivery Hub
           </h1>
           <div className="version-badge" style={{ fontSize: 10, background: '#eee', padding: '2px 6px', borderRadius: 4, opacity: 0.6 }}>v1.0.9</div>
           <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            <button className="btn-secondary" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => {
-               setViewRole('office'); setActiveTab('calendar'); setViewMode('weekly'); setCurrentDate(new Date()); setShowArchive(false); window.location.hash = '#role=office&tab=calendar&view=weekly';
-            }}>🏠 Home</button>
             {/* Role Toggle */}
             <div className="role-toggle">
               <button
@@ -526,6 +523,9 @@ function App() {
                   <button className={`office-tab ${activeTab === 'calendar' ? 'active' : ''}`} onClick={() => setActiveTab('calendar')}>
                     📅 Calendar
                   </button>
+                  <button className={`office-tab ${activeTab === 'active' ? 'active' : ''}`} onClick={() => setActiveTab('active')}>
+                    🚛 Active
+                  </button>
                   <button className={`office-tab ${activeTab === 'followups' ? 'active' : ''}`} onClick={() => setActiveTab('followups')}>
                     💬 Follow-ups
                     {followupCount > 0 && <span className="office-tab-badge">{followupCount}</span>}
@@ -581,6 +581,34 @@ function App() {
                       {viewMode === 'monthly' && <MonthlyCalendar deliveries={liveDeliveries} repairEvents={repairs.filter(r => r.returnDate)} currentDate={currentDate} onEditDelivery={handleEditDelivery} onNewFromSlot={handleNewFromSlot} onPrev={handlePrev} onNext={handleNext} onSwitchTab={setActiveTab} />}
                     </main>
                   </>
+                )}
+
+                {activeTab === 'active' && (
+                  <div className="active-deliveries-list" style={{ padding: '0 4px' }}>
+                    <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 16 }}>
+                      Active Deliveries ({liveDeliveries.filter(d => !['Delivered', 'Completed'].includes(d.status)).length})
+                    </h3>
+                    {sortDeliveriesByTime(liveDeliveries.filter(d => !['Delivered', 'Completed'].includes(d.status)))
+                      .map((d, i) => (
+                        <div key={d.id} onClick={() => handleEditDelivery(d)} style={{ 
+                          background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--border)', 
+                          padding: '14px 16px', marginBottom: 10, cursor: 'pointer', display: 'flex', 
+                          justifyContent: 'space-between', alignItems: 'center', boxShadow: 'var(--shadow-sm)'
+                        }}>
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-main)' }}>{d.clientName}</div>
+                            <div style={{ fontSize: 12, color: 'var(--text-light)', marginTop: 2 }}>
+                              {fmtDate(d.date)} • {d.timeWindow} • Stop #{i+1}
+                            </div>
+                          </div>
+                          <span style={{ 
+                            fontSize: 10, fontWeight: 700, padding: '4px 8px', borderRadius: 4, 
+                            background: getStatusBg(d.status), color: getStatusColor(d.status),
+                            border: `1px solid ${getStatusColor(d.status)}40`, textTransform: 'uppercase'
+                          }}>{d.status}</span>
+                        </div>
+                    ))}
+                  </div>
                 )}
 
                 {activeTab === 'followups' && (

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import TeamDeliveryForm from './TeamDeliveryForm';
-import { localDate, fmtDate } from '../lib/constants';
+import { localDate, fmtDate, sortDeliveriesByTime } from '../lib/constants';
 
 export default function TeamView({ deliveries, updateDelivery }) {
   const [activeId, setActiveId] = useState(null);
@@ -24,7 +24,7 @@ export default function TeamView({ deliveries, updateDelivery }) {
     d.flagged
   );
 
-  const todayStops = teamVisible.filter(d => d.date === today);
+  const todayStops = sortDeliveriesByTime(teamVisible.filter(d => d.date === today));
   const otherStops = teamVisible.filter(d => d.date !== today);
 
   // Group other stops by date
@@ -32,6 +32,7 @@ export default function TeamView({ deliveries, updateDelivery }) {
     const key = d.date || 'No Date';
     if (!acc[key]) acc[key] = [];
     acc[key].push(d);
+    acc[key] = sortDeliveriesByTime(acc[key]);
     return acc;
   }, {});
   const sortedOtherDates = Object.keys(otherByDate).sort();

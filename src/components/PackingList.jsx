@@ -1,10 +1,20 @@
 import React from 'react';
 import { fmtDate } from '../lib/constants';
 
-export default function PackingList({ delivery, onClose, mode = 'warehouse' }) {
+export default function PackingList({ delivery, onClose, mode = 'warehouse', stopNum }) {
   const [zoomUrl, setZoomUrl] = React.useState(null);
+  const [pulledItems, setPulledItems] = React.useState({});
+  const [pullNotes, setPullNotes] = React.useState({});
   
   if (!delivery) return null;
+
+  const togglePulled = (idx) => {
+    setPulledItems(prev => ({ ...prev, [idx]: !prev[idx] }));
+  };
+
+  const updatePullNote = (idx, note) => {
+    setPullNotes(prev => ({ ...prev, [idx]: note }));
+  };
 
   const handlePrint = () => { window.print(); };
 
@@ -69,6 +79,19 @@ export default function PackingList({ delivery, onClose, mode = 'warehouse' }) {
         .mode-client .pl-client-img { width: 100%; aspect-ratio: 1/1; background: #f9f9f9; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
         .mode-client .pl-client-img img { width: 100%; height: 100%; object-fit: contain; }
         .mode-client .pl-client-name { font-size: 17px; font-weight: 600; margin-bottom: 5px; }
+
+        @media (max-width: 600px) {
+          .mode-client .prep-grid,
+          .mode-client .pl-client-items {
+            grid-template-columns: 1fr;
+            gap: 30px;
+          }
+          .pl-container { padding: 40px 20px; }
+          .mode-client h1 { font-size: 32px; }
+          .mode-warehouse .pl-item-row { flex-direction: column; align-items: flex-start; }
+          .mode-warehouse .pl-item-details { width: 100%; flex-direction: column; align-items: flex-start; gap: 10px; }
+          .mode-warehouse .pl-item-image { width: 140px; height: 140px; }
+        }
 
         .zoom-overlay {
           position: fixed; inset: 0; z-index: 4000; background: rgba(0,0,0,0.9);
@@ -183,7 +206,7 @@ export default function PackingList({ delivery, onClose, mode = 'warehouse' }) {
           <div className="warehouse-view">
             <header className="pl-header">
               <div>
-                <h1 className="pl-title">Warehouse Pull List</h1>
+                <h1 className="pl-title">{stopNum ? `Stop #${stopNum}: ` : ''}Warehouse Pull List</h1>
                 <div style={{ fontSize: 14, marginTop: 4 }}>Caravana Operations Hub</div>
               </div>
               <div style={{ textAlign: 'right' }}>
@@ -209,17 +232,52 @@ export default function PackingList({ delivery, onClose, mode = 'warehouse' }) {
 
             <div className="pl-items">
               {delivery.items?.map((item, idx) => (
-                <div key={idx} className="pl-item-row" onClick={() => item.imageUrl && setZoomUrl(item.imageUrl)}>
-                  <div className="pl-item-image">
-                    {item.imageUrl ? <img src={item.imageUrl} alt={item.description} /> : <span style={{ color: '#ddd' }}>📷</span>}
-                  </div>
-                  <div className="pl-item-details">
-                    <div>
-                      <div style={{ fontSize: 16, fontWeight: 700 }}>{item.description}</div>
-                      <div style={{ fontSize: 12, color: '#666', fontFamily: 'monospace' }}>Ref: {item.itemNumber || 'N/A'}</div>
+                <div key={idx} style={{ marginBottom: 20, borderBottom: '1px solid #eee', paddingBottom: 15 }}>
+                  <div className="pl-item-row" style={{ borderBottom: 'none' }}>
+                    <div style={{ marginRight: 15 }} className="no-print">
+                      <input 
+                        type="checkbox" 
+                        checked={!!pulledItems[idx]} 
+                        onChange={() => togglePulled(idx)}
+                        style={{ width: 24, height: 24, cursor: 'pointer' }}
+                      />
                     </div>
-                    <div style={{ fontSize: 20, fontWeight: 800 }}>Qty: {item.qty || 1}</div>
+                    <div className="pl-item-image" style={{ width: 140, height: 140, cursor: 'zoom-in' }} onClick={() => item.imageUrl && setZoomUrl(item.imageUrl)}>
+                      {item.imageUrl ? <img src={item.imageUrl} alt={item.description} /> : <span style={{ color: '#ddd' }}>📷</span>}
+                    </div>
+                    <div className="pl-item-details">
+                      <div>
+                        <div style={{ fontSize: 18, fontWeight: 700, color: pulledItems[idx] ? '#0b7a4a' : '#000' }}>
+                          {pulledItems[idx] && '✅ '}{item.description}
+                        </div>
+                        <div style={{ fontSize: 12, color: '#666', fontFamily: 'monospace', marginTop: 4 }}>
+                          Ref: {item.itemNumber || 'N/A'} • Source: {item.inventorySource || 'Warehouse'}
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 24, fontWeight: 900 }}>Qty: {item.qty || 1}</div>
+                    </div>
                   </div>
+                  {/* Note Field */}
+                  <div style={{ marginTop: 10, paddingLeft: 40 }} className="no-print">
+                    <input 
+                      type="text" 
+                      placeholder="Add note (damage, parts, location...)"
+                      value={pullNotes[idx] || ''}
+                      onChange={(e) => updatePullNote(idx, e.target.value)}
+                      style={{ 
+                        width: '100%', padding: '8px 12px', borderRadius: 6, 
+                        border: '1px solid #ddd', fontSize: 13, background: '#fff' 
+                      }} 
+                    />
+                  </div>
+                  {pullNotes[idx] && (
+                    <div className="print-only" style={{ display: 'none', marginTop: 5, paddingLeft: 40, fontSize: 12, color: '#c53030', fontWeight: 600 }}>
+                      NOTE: {pullNotes[idx]}
+                    </div>
+                  )}
+                  <style>{`
+                    @media print { .print-only { display: block !important; } }
+                  `}</style>
                 </div>
               ))}
             </div>

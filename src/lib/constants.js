@@ -115,6 +115,16 @@ export const LIFECYCLE_STATUSES = [
 ];
 
 // ── Helpers ─────────────────────────────────────────────────────
+export const getStatusColor = (val = '') => {
+  const status = LIFECYCLE_STATUSES.find(s => s.value === (val || 'Pending'));
+  return status ? status.color : '#6b7280';
+};
+
+export const getStatusBg = (val = '') => {
+  const status = LIFECYCLE_STATUSES.find(s => s.value === (val || 'Pending'));
+  return status ? status.bg : '#f3f4f6';
+};
+
 export const addDays = (dateStr, n) => {
   if (!dateStr) return '';
   const d = new Date(dateStr + 'T12:00:00');
@@ -135,6 +145,28 @@ export const fmtDate = (d) => {
 
 export const localDate = (date = new Date()) => {
   return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+};
+
+// Parse time string (e.g., "08:00 AM") into sortable minutes from midnight
+const parseTimeToMinutes = (timeStr = '') => {
+  if (!timeStr) return 9999; // Put undated at the end
+  const match = timeStr.match(/(\d+):(\d+) ([AP]M)/);
+  if (!match) return 9999;
+  let [_, hrs, mins, amp] = match;
+  hrs = parseInt(hrs);
+  mins = parseInt(mins);
+  if (amp === 'PM' && hrs !== 12) hrs += 12;
+  if (amp === 'AM' && hrs === 12) hrs = 0;
+  return hrs * 60 + mins;
+};
+
+// Sort deliveries/repairs by their first time window
+export const sortDeliveriesByTime = (list = []) => {
+  return [...list].sort((a, b) => {
+    const aTime = parseTimeToMinutes((a.timeWindow || '').split(' - ')[0]);
+    const bTime = parseTimeToMinutes((b.timeWindow || b.returnTimeWindow || '').split(' - ')[0]);
+    return aTime - bTime;
+  });
 };
 
 // Centralized logic for follow-ups to keep counts and tabs in sync

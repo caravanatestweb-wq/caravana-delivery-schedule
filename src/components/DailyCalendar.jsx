@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { getStatusColor } from '../lib/constants';
 import './WeeklyCalendar.css';
 import './DailyCalendar.css';
 
