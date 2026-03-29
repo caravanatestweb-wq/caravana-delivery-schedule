@@ -132,31 +132,17 @@ export default function ETAPanel({ delivery, onClose }) {
         {/* Actions */}
         <div style={{ display: 'flex', gap: 8, flexDirection: 'column' }}>
           <div style={{ display: 'flex', gap: 8 }}>
-            {hasCredentials && (
-              <button
-                onClick={handleDirectSend}
-                disabled={sending || !delivery.phone}
-                style={{
-                  flex: 1.5, padding: '13px 0', borderRadius: 10, background: '#0b7a4a',
-                  color: '#fff', fontWeight: 700, fontSize: 15, cursor: sending ? 'not-allowed' : 'pointer',
-                  border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                }}
-              >
-                {sending ? '⏳ Sending...' : sentStatus === 'sent' ? '✅ Sent!' : '🚀 Send Message'}
-              </button>
-            )}
-            {!hasCredentials && delivery.phone && (
-              <a
-                href={`sms:${delivery.phone}?body=${encodeURIComponent(message)}`}
-                style={{
-                  flex: 1, padding: '13px 0', borderRadius: 10, background: '#0b7a4a',
-                  color: '#fff', fontWeight: 700, fontSize: 15, textAlign: 'center',
-                  textDecoration: 'none', display: 'block',
-                }}
-              >
-                📱 Open SMS
-              </a>
-            )}
+            <button
+              onClick={handleDirectSend}
+              disabled={sending || !delivery.phone}
+              style={{
+                flex: 1.5, padding: '13px 0', borderRadius: 10, background: '#0b7a4a',
+                color: '#fff', fontWeight: 700, fontSize: 15, cursor: sending ? 'not-allowed' : 'pointer',
+                border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              }}
+            >
+              {sending ? '⏳ Sending...' : sentStatus === 'sent' ? '✅ Sent!' : '🚀 Send Message'}
+            </button>
             <button
               onClick={handleCopy}
               disabled={sending}

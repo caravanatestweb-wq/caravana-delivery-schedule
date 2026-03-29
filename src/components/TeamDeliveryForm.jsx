@@ -5,7 +5,11 @@ import SignaturePad from './SignaturePad';
 import ETAPanel from './ETAPanel';
 import StylingTipsPanel from './StylingTipsPanel';
 
-const LEGAL_TEXT = `The undersigned hereby acknowledges receipt and delivery of the goods described and further acknowledges that said goods have been inspected and are without defect. There will not be any cash refund or exchange after the merchandise has been received. FLOOR SAMPLES ARE AS IS AND ARE FINAL SALE. WARRANTY WILL BE VOID IF THE FURNITURE WAS DISASSEMBLED AND, OR MOVED TO A DIFFERENT ADDRESS TO WHERE IT WAS DELIVERED.`;
+const LEGAL_TEXT = `The undersigned hereby acknowledges receipt and delivery of the goods described on the annexed list or invoice and further acknowledges that said goods have been inspected and are delivered without damage. Any concealed damages or manufacturing defects must be reported within 24 hours. The customer acknowledges that outside of the approved 7-Day trial items, there are absolutely no cash refunds or exchanges after the merchandise has been received, assembled, or removed from original packaging.
+
+Clearance Item
+All clearance items are final sale. Floor models are sold as-is. No returns, exchanges, or additional discounts apply. Same as floor samples. 
+In this web address we have more information about our 7 day trial https://www.caravanafurniture.com/pages/return-policy please review.`;
 
 const PICKUP_TEXT = `By signing below, I acknowledge that the above items have been picked up by Caravana Furniture and the condition has been documented. I understand the applicable fees as communicated.`;
 
@@ -38,6 +42,7 @@ export default function TeamDeliveryForm({ delivery, onBack, updateDelivery }) {
   const [showTips, setShowTips] = useState(false);
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
+  const [completeMode, setCompleteMode] = useState('Delivered');
 
   // Auto-mark as in-progress when opened
   useEffect(() => {
@@ -97,7 +102,8 @@ export default function TeamDeliveryForm({ delivery, onBack, updateDelivery }) {
     setSaving(true);
     const trialExpires = !isReturn ? addDays(delivery.date || today, 7) : delivery.trialExpires;
     const updates = {
-      status: 'Delivered',
+      status: completeMode === 'Delivered' ? 'Delivered' : 'Completed',
+      flagged: completeMode === 'Delivered' ? (delivery.flagged || null) : completeMode.toLowerCase(),
       completedAt: new Date().toISOString(),
       items, inspection, inspectionNotes, condition, damageNotes, deliveryNotes,
       printName, signDate, signatureUrl, trialExpires,
@@ -122,17 +128,17 @@ export default function TeamDeliveryForm({ delivery, onBack, updateDelivery }) {
             fontSize: 36, color: '#fff', marginBottom: 20,
           }}>✓</div>
           <h2 style={{ margin: '0 0 8px', fontSize: 24, color: 'var(--text-main)' }}>
-            {isReturn ? 'Pickup Complete!' : 'Delivery Complete!'}
+            {isReturn ? 'Pickup Complete!' : completeMode !== 'Delivered' ? `${completeMode} Logged!` : 'Delivery Completed!'}
           </h2>
           <p style={{ color: 'var(--text-light)', marginBottom: 6 }}>{delivery.clientName}</p>
-          {!isReturn && (
+          {!isReturn && completeMode === 'Delivered' && (
             <p style={{ color: '#0b7a4a', fontSize: 14, fontWeight: 600 }}>
               7-Day Trial expires: {fmtDate(addDays(delivery.date || today, 7))}
             </p>
           )}
 
           {/* Acknowledgement Text Option */}
-          {delivery.phone && !isReturn && (
+          {delivery.phone && (!isReturn && completeMode === 'Delivered') && (
             <div style={{ marginTop: '1.5rem' }}>
               <button
                 onClick={() => {
@@ -452,6 +458,25 @@ export default function TeamDeliveryForm({ delivery, onBack, updateDelivery }) {
         padding: '20px 16px 20px',
         maxWidth: 760, margin: '0 auto',
       }}>
+        {!isReturn && (
+          <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+            {['Delivered', 'Return', 'Exchange', 'Repair'].map(m => (
+              <button
+                key={m}
+                onClick={() => setCompleteMode(m)}
+                style={{
+                  flex: 1, padding: '10px 4px', fontSize: 13, fontWeight: 700, borderRadius: 10, cursor: 'pointer',
+                  border: `1.5px solid ${completeMode === m ? '#0b7a4a' : 'var(--border)'}`,
+                  background: completeMode === m ? '#eef7f0' : 'var(--surface)',
+                  color: completeMode === m ? '#0b7a4a' : 'var(--text-light)',
+                  transition: 'var(--transition)'
+                }}
+              >
+                {m === 'Delivered' ? '✅ Delivered' : m}
+              </button>
+            ))}
+          </div>
+        )}
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={() => setShowETA(true)} style={{ padding: '13px 14px', borderRadius: 12, border: '1.5px solid var(--border)', background: 'var(--surface)', fontSize: 20, cursor: 'pointer' }}>🚛</button>
           <button onClick={() => setShowTips(true)} style={{ padding: '13px 14px', borderRadius: 12, border: '1.5px solid var(--border)', background: 'var(--surface)', fontSize: 18, cursor: 'pointer' }}>💡</button>
@@ -467,7 +492,7 @@ export default function TeamDeliveryForm({ delivery, onBack, updateDelivery }) {
               transition: 'var(--transition)',
             }}
           >
-            {saving ? 'Saving...' : isReturn ? 'Complete Pickup ✓' : 'Complete Delivery ✓'}
+            {saving ? 'Saving...' : isReturn ? 'Complete Pickup ✓' : completeMode === 'Delivered' ? 'Delivery Completed ✓' : `Mark as ${completeMode} ✓`}
           </button>
         </div>
         {!canComplete && (
