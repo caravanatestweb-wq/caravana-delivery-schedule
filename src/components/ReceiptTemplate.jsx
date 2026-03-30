@@ -121,37 +121,38 @@ export default function ReceiptTemplate({ delivery }) {
       </div>
 
       <div style={styles.terms}>
-        The undersigned hereby acknowledges receipt and delivery of the goods described on the annexed list or invoice and further acknowledges that said goods have been inspected and are delivered without damage. Any concealed damages or manufacturing defects must be reported within 24 hours. The customer acknowledges that outside of the approved 7-Day trial items, there are absolutely no cash refunds or exchanges after the merchandise has been received, assembled, or removed from original packaging. 
-        <br /><br />
-        <strong>Clearance Item:</strong> All clearance items are final sale. Floor models are sold as-is. No returns, exchanges, or additional discounts apply. Same as floor samples.
-        <br /><br />
-        <strong>Policies:</strong><br />
-        7-Day Home Comfort Trial: <a href="https://www.caravanafurniture.com/pages/return-policy" style={{ color: '#000', textDecoration: 'underline' }}>https://www.caravanafurniture.com/pages/return-policy</a><br />
-        Full Warranty Details: <a href="https://www.caravanafurniture.com/pages/warranty" style={{ color: '#000', textDecoration: 'underline' }}>https://www.caravanafurniture.com/pages/warranty</a>
+        {delivery.trialEnabled !== false ? (
+          "The undersigned hereby acknowledges receipt and delivery of the goods described on the annexed invoice and confirms that all items have been inspected and received in satisfactory condition. Caravana's 7-Day Home Comfort Trial applies from the date of delivery. Exchanges are welcome within that window and are subject to a discounted service fee. Returns are subject to a 15% restocking fee plus a service fee based on item size; refunds are issued to the original payment method or as store credit. Clearance, custom, made-to-order, and mattress items are final sale and not eligible for the trial. Floor samples are sold as-is and are final sale."
+        ) : (
+          "The undersigned hereby acknowledges receipt and delivery of the goods described on the annexed invoice and confirms that all items have been inspected and received in satisfactory condition. All sales are final at the time of delivery. No cash refunds or exchanges will be issued once merchandise has been received. Exchanges may be considered within 48 hours of delivery on a case-by-case basis and are subject to item condition, availability, and applicable service fees. Floor samples are sold as-is and are final sale."
+        )}
       </div>
 
       <div style={styles.sigArea}>
-        <div style={styles.sigLine}>
-          <div style={styles.sigImgWrap}>
-            {delivery.signatureUrl ? (
-              <img src={delivery.signatureUrl} style={styles.sigImg} alt="Signature" />
-            ) : (
-              <span style={{ color: '#aaa', paddingBottom: 5 }}>No signature provided</span>
+        <div style={{ display: 'flex', alignItems: 'flex-end', marginBottom: 5 }}>
+          <div style={{ ...styles.sigImgWrap, width: 450, position: 'relative' }}>
+            {delivery.signatureUrl && (
+              <img src={delivery.signatureUrl} style={{ height: 48, position: 'absolute', bottom: 0, left: 10 }} alt="Signature" />
             )}
           </div>
-          <span style={{ marginRight: 10 }}>Date</span>
-          <div style={styles.dateLine2}>{signDate}</div>
+          <span style={{ fontSize: 16, margin: '0 15px' }}>Date</span>
+          <div style={{ borderBottom: '1px solid #000', width: 120, textAlign: 'center', paddingBottom: 2, fontSize: 15 }}>
+            {signDate}
+          </div>
         </div>
-        <div style={{ fontSize: 14, marginBottom: 25 }}>Signature of Person receiving the goods :</div>
+        
+        <div style={{ fontSize: 14, marginBottom: 35 }}>Signature of Person Receiving Goods</div>
         
         <div style={styles.printWrap}>
-          <span style={styles.printInput}>{delivery.printName}</span>
+          <div style={{ borderBottom: '1px solid #000', width: 450, height: 25, fontSize: 16, paddingLeft: 10 }}>
+            {delivery.printName}
+          </div>
           <span style={{ fontSize: 14, marginTop: 4 }}>Print Name</span>
         </div>
       </div>
 
-      <div style={styles.footer}>
-        CARAVANA FURNITURE  |  975 LONG BEACH BLVD. LONG BEACH, CA 90813  |  562.432.0562
+      <div style={{ ...styles.footer, fontSize: 11, letterSpacing: 0.5, color: '#333', fontWeight: 'bold' }}>
+        CARAVANA FURNITURE | 975 Long Beach Blvd, Long Beach, CA 90813 | 562.432.0562
       </div>
     </div>
   );
