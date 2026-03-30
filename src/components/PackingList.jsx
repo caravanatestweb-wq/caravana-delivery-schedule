@@ -207,7 +207,7 @@ export default function PackingList({ delivery, onClose, mode = 'warehouse', sto
                 caravanafurniture.com  ·  (562) 432-0562
               </div>
               
-              <a href="sms:+15624320562" className="no-print" style={{ 
+              <a href="sms:+18332424197" className="no-print" style={{ 
                 display: 'inline-block', 
                 background: '#eee', 
                 color: '#111', 
