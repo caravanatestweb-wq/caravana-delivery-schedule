@@ -108,7 +108,9 @@ export default function PackingList({ delivery, onClose, mode = 'warehouse', sto
 
       <div className="no-print" style={{ position: 'sticky', top: 0, background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)', zIndex: 100, padding: '15px 0', borderBottom: '1px solid #eee', display: 'flex', gap: 12, justifyContent: 'center' }}>
         <button onClick={handlePrint} style={{ padding: '10px 24px', background: '#111', color: '#fff', border: 'none', borderRadius: 4, fontWeight: 600, cursor: 'pointer' }}>🖨️ Print Document</button>
-        <button onClick={onClose} style={{ padding: '10px 24px', background: 'transparent', color: '#666', border: '1px solid #ddd', borderRadius: 4, fontWeight: 600, cursor: 'pointer' }}>Close</button>
+        {!isClient && (
+          <button onClick={onClose} style={{ padding: '10px 24px', background: 'transparent', color: '#666', border: '1px solid #ddd', borderRadius: 4, fontWeight: 600, cursor: 'pointer' }}>Close</button>
+        )}
       </div>
 
       <div className="pl-container">
