@@ -170,21 +170,48 @@ export default function TeamSettings({ onClose }) {
           {activeTab === 'integrations' && (
             <>
               {/* TextMagic */}
+              {/* TextMagic */}
               <div style={{ background: 'var(--bg-color)', borderRadius: 12, border: '1px solid var(--border)', padding: '16px', marginBottom: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                   <div style={{ fontSize: 22 }}>🚀</div>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-main)' }}>Secure SMS Dispatch</div>
-                    <div style={{ fontSize: 12, color: '#0b7a4a', fontWeight: 600 }}>
-                      ✅ Active via Vercel API
+                    <div style={{ fontSize: 12, color: 'var(--text-light)', fontWeight: 600 }}>
+                      TextMagic Configuration
                     </div>
                   </div>
                 </div>
 
-                <div style={{ fontSize: 13, color: 'var(--text-light)', lineHeight: 1.6 }}>
-                  Text messages are now sent securely through the Caravana server. 
-                  <br /><br />
-                  Individual device setup is <strong>no longer required</strong>. API keys are managed safely in the Vercel Dashboard.
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-light)', marginBottom: 4, display: 'block' }}>TextMagic Username</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. caravanafurniture" 
+                      defaultValue={localStorage.getItem('tm_username') || ''} 
+                      onBlur={(e) => {
+                        if(e.target.value) localStorage.setItem('tm_username', e.target.value);
+                        else localStorage.removeItem('tm_username');
+                      }}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 13, background: 'var(--surface)', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-light)', marginBottom: 4, display: 'block' }}>API Key</label>
+                    <input 
+                      type="password" 
+                      placeholder="Paste v2 API Key here..." 
+                      defaultValue={localStorage.getItem('tm_apikey') || ''} 
+                      onBlur={(e) => {
+                        if(e.target.value) localStorage.setItem('tm_apikey', e.target.value);
+                        else localStorage.removeItem('tm_apikey');
+                      }}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 13, background: 'var(--surface)', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  <div style={{ fontSize: 11, color: '#0b7a4a', fontWeight: 600, marginTop: 4 }}>
+                    ✅ Keys save automatically when you click outside the box.
+                  </div>
                 </div>
               </div>
 

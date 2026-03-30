@@ -5,12 +5,12 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const { text, phones } = req.body;
-  const username = process.env.TM_USERNAME;
-  const apiKey = process.env.TM_APIKEY;
+  const { text, phones, username: bodyUser, apiKey: bodyKey } = req.body;
+  const username = bodyUser || process.env.TM_USERNAME;
+  const apiKey = bodyKey || process.env.TM_APIKEY;
 
   if (!username || !apiKey) {
-    return res.status(500).json({ error: 'TextMagic credentials not set on server.' });
+    return res.status(500).json({ error: 'TextMagic credentials not set. Please configure them in the Office Hub Settings (⚙️).' });
   }
 
   try {
