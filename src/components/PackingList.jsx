@@ -202,11 +202,26 @@ export default function PackingList({ delivery, onClose, mode = 'warehouse', sto
 
             <footer style={{ marginTop: 100, borderTop: '2px solid #111', paddingTop: 40, textAlign: 'center' }}>
               <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 10 }} className="pl-serif">Caravana Furniture</div>
-              <div style={{ color: '#666', fontSize: 14 }}>
+              <div style={{ color: '#666', fontSize: 14, marginBottom: 30 }}>
                 975 Long Beach Blvd, Long Beach, CA 90813<br/>
                 caravanafurniture.com  ·  (562) 432-0562
               </div>
-              <div style={{ marginTop: 30, fontSize: 12, color: '#999' }}>✦  We're always happy to help  ✦</div>
+              
+              <a href="sms:+15624320562" className="no-print" style={{ 
+                display: 'inline-block', 
+                background: '#eee', 
+                color: '#111', 
+                padding: '14px 28px', 
+                borderRadius: '50px', 
+                textDecoration: 'none', 
+                fontWeight: 600,
+                fontSize: 14,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+              }}>
+                💬 If you have any questions or need to contact us, send us a text.
+              </a>
+
+              <div style={{ marginTop: 50, fontSize: 12, color: '#c0c0c0' }}>✦  We're always happy to help  ✦</div>
             </footer>
           </div>
         ) : (

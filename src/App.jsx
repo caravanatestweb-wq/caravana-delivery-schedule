@@ -346,7 +346,10 @@ function App() {
   const handleGoToday = () => setCurrentDate(new Date());
   const handlePrev = () => setCurrentDate(navigate(currentDate, viewMode, -1));
   const handleNext = () => setCurrentDate(navigate(currentDate, viewMode, 1));
-  const handleDropdownChange = (e) => setCurrentDate(new Date(e.target.value));
+  const handleDropdownChange = (e) => {
+    const [y, m, d] = e.target.value.split('-');
+    setCurrentDate(new Date(y, m - 1, d));
+  };
 
   const handleArchiveDelivery = async (id) => {
     const { error } = await supabase.from('deliveries').update({ status: 'Archived' }).eq('id', id);
