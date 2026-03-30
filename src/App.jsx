@@ -12,6 +12,7 @@ import FollowUpsTab from './components/FollowUpsTab';
 import ReturnsTab from './components/ReturnsTab';
 import TeamSettings from './components/TeamSettings';
 import PackingList from './components/PackingList';
+import ReceiptTemplate from './components/ReceiptTemplate';
 import { supabase } from './lib/supabaseClient';
 import { localDate, getFollowUpType, sortDeliveriesByTime, fmtDate, getStatusBg, getStatusColor } from './lib/constants';
 import './App.css';
@@ -106,6 +107,7 @@ function App() {
   const [printingDelivery, setPrintingDelivery] = useState(null);
   const [printMode, setPrintMode] = useState('warehouse');
   const [publicPreviewId, setPublicPreviewId] = useState(null);
+  const [publicReceiptId, setPublicReceiptId] = useState(null);
 
   // ── Print Packing List Event ────────────────────────────────
   useEffect(() => {
@@ -136,6 +138,12 @@ function App() {
       } else {
         setPublicPreviewId(null);
       }
+      
+      if (params.get('view') === 'receipt') {
+        setPublicReceiptId(params.get('id'));
+      } else {
+        setPublicReceiptId(null);
+      }
     };
 
     window.addEventListener('popstate', handlePopState);
@@ -149,7 +157,7 @@ function App() {
 
   // Update hash when state changes
   useEffect(() => {
-    if (publicPreviewId || window.location.hash.includes('view=preview')) return;
+    if (publicPreviewId || publicReceiptId || window.location.hash.includes('view=preview') || window.location.hash.includes('view=receipt')) return;
 
     const params = new URLSearchParams();
     params.set('role', viewRole);
@@ -408,6 +416,23 @@ function App() {
           window.location.hash = window.location.hash.replace('view=preview', 'view=weekly');
         }} 
       />
+    );
+  }
+
+  // ── Public Receipt Rendering ──
+  if (publicReceiptId) {
+    const delivery = deliveries.find(d => d.id === publicReceiptId);
+    if (isLoading) return <div style={{ padding: 100, textAlign: 'center' }}>Loading your delivery receipt...</div>;
+    if (!delivery) return <div style={{ padding: 100, textAlign: 'center' }}>Receipt not found. Please contact Caravana Furniture.</div>;
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#ccc', minHeight: '100vh', padding: '40px 20px' }}>
+        <button className="no-print" style={{ marginBottom: 20, padding: '12px 24px', background: '#111', color: '#fff', border: 'none', borderRadius: 4, fontWeight: 'bold', cursor: 'pointer' }} onClick={() => window.print()}>
+          🖨️ Print Document
+        </button>
+        <div style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.1)', background: '#fff' }}>
+          <ReceiptTemplate delivery={delivery} />
+        </div>
+      </div>
     );
   }
 
