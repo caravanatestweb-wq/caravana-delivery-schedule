@@ -52,7 +52,7 @@ export default function FollowUpsTab({ deliveries, updateDelivery }) {
   const upcomingPrepItems = deliveries
     .filter(d => {
       const days = daysBetween(today, d.date);
-      return days >= 0 && days <= 2 && d.status !== 'Delivered' && d.status !== 'Completed' && !d.prepSent;
+      return days >= 0 && days <= 14 && d.status !== 'Delivered' && d.status !== 'Completed' && !d.prepSent;
     })
     .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
