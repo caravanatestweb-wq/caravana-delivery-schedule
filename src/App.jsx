@@ -149,6 +149,8 @@ function App() {
 
   // Update hash when state changes
   useEffect(() => {
+    if (publicPreviewId) return;
+
     const params = new URLSearchParams();
     params.set('role', viewRole);
     params.set('tab', activeTab);
@@ -166,7 +168,7 @@ function App() {
         window.history.replaceState(null, '', newHash);
       }
     }
-  }, [viewRole, activeTab, viewMode, currentDate, showArchive]);
+  }, [viewRole, activeTab, viewMode, currentDate, showArchive, publicPreviewId]);
 
   // 1. Initial Load from Supabase
   useEffect(() => {
