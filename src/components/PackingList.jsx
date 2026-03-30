@@ -144,7 +144,7 @@ export default function PackingList({ delivery, onClose, mode = 'warehouse', sto
 
             <div style={{ maxWidth: 700, margin: '0 auto', textAlign: 'center', marginBottom: 60 }}>
               <p style={{ fontSize: 18, color: '#444', lineHeight: 1.7 }}>
-                Hi {(delivery.clientName || '').split(' ')[0]}! We're so excited for your delivery — it's almost time! Your new furniture is scheduled to arrive soon, and {delivery.deliveryTeam && delivery.deliveryTeam !== 'Unassigned' ? <strong>{delivery.deliveryTeam}</strong> : 'our staging team'} will be bringing it to you! We want to make sure the experience is as smooth and enjoyable as possible.
+                Hi {(delivery.clientName || '').split(' ')[0]}! We're so excited for your delivery! It's almost time. Your new furniture is scheduled to arrive soon, and {delivery.deliveryTeam && delivery.deliveryTeam !== 'Unassigned' ? <strong>{delivery.deliveryTeam}</strong> : 'our staging team'} will be the team who will take care of your delivery. We want to make sure the experience is as smooth and enjoyable as possible.
               </p>
             </div>
 
@@ -168,7 +168,7 @@ export default function PackingList({ delivery, onClose, mode = 'warehouse', sto
                   <div className="prep-title">Before Your Delivery</div>
                   <div className="prep-text">
                     • Measure doorways, hallways, and any tight corners along the path to your destination room.<br/>
-                    • Decide where you'd like each piece placed — our team will position everything before we leave.<br/>
+                    • Decide where you'd like each piece placed. Our team will position everything before we leave.<br/>
                     • Clear a walking path from your entrance to the room, including any area rugs or fragile décor.<br/>
                     • Secure your pets in a separate room for the duration of the visit.
                   </div>
@@ -184,7 +184,7 @@ export default function PackingList({ delivery, onClose, mode = 'warehouse', sto
                 <div className="prep-item">
                   <div className="prep-title">On Delivery Day</div>
                   <div className="prep-text">
-                    • An adult (18+) must be present for the full appointment — we'll do a walkthrough together at the end.<br/>
+                    • An adult (18+) must be present for the full appointment. We'll do a walkthrough together at the end.<br/>
                     • Please ensure there's accessible parking or curb space near your entrance for our delivery vehicle.<br/>
                     • Consider moving any artwork or mirrors along narrow hallways to prevent accidental bumps.
                   </div>
@@ -192,7 +192,7 @@ export default function PackingList({ delivery, onClose, mode = 'warehouse', sto
                 <div className="prep-item">
                   <div className="prep-title">White-Glove & Assembly</div>
                   <div className="prep-text">
-                    Our team will carry everything directly to your room of choice, complete all assembly on-site, and remove all packaging materials before leaving. We'll do a full walkthrough with you at the end — take your time, test everything. We won't consider the job done until you do.
+                    Our team will carry everything directly to your room of choice, complete all assembly on-site, and remove all packaging materials before leaving. We'll do a full walkthrough with you at the end. Take your time, test everything. We won't consider the job done until you do.
                   </div>
                 </div>
               </div>
