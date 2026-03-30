@@ -120,7 +120,7 @@ export default function PackingList({ delivery, onClose, mode = 'warehouse', sto
               <h1 className="pl-serif">Your Delivery Experience</h1>
               <div className="subtitle">Caravana Furniture  ·  Long Beach, CA</div>
               
-              <div style={{ marginTop: 40, borderTop: '1px solid #eee', borderBottom: '1px solid #eee', padding: '20px 0', display: 'flex', justifyContent: 'center', gap: 60 }}>
+              <div style={{ marginTop: 40, borderTop: '1px solid #eee', borderBottom: '1px solid #eee', padding: '20px 0', display: 'flex', justifyContent: 'center', gap: '20px 50px', flexWrap: 'wrap' }}>
                 <div style={{ textAlign: 'left' }}>
                   <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#999', marginBottom: 4 }}>Scheduled For</div>
                   <div style={{ fontWeight: 600 }}>{fmtDate(delivery.date)}</div>
@@ -129,6 +129,12 @@ export default function PackingList({ delivery, onClose, mode = 'warehouse', sto
                   <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#999', marginBottom: 4 }}>Arrival Window</div>
                   <div style={{ fontWeight: 600 }}>{delivery.timeWindow}</div>
                 </div>
+                {delivery.deliveryTeam && (
+                  <div style={{ textAlign: 'left' }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#999', marginBottom: 4 }}>Delivery Team</div>
+                    <div style={{ fontWeight: 600 }}>{delivery.deliveryTeam}</div>
+                  </div>
+                )}
                 <div style={{ textAlign: 'left' }}>
                   <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#999', marginBottom: 4 }}>Reference</div>
                   <div style={{ fontWeight: 600 }}>{delivery.orderNumber || delivery.invoiceNumber || 'Delivery Preview'}</div>
@@ -138,7 +144,7 @@ export default function PackingList({ delivery, onClose, mode = 'warehouse', sto
 
             <div style={{ maxWidth: 700, margin: '0 auto', textAlign: 'center', marginBottom: 60 }}>
               <p style={{ fontSize: 18, color: '#444', lineHeight: 1.7 }}>
-                Hi {(delivery.clientName || '').split(' ')[0]}! We're so excited for your delivery — it's almost time! Your new furniture is scheduled to arrive soon, and we want to make sure the experience is as smooth and enjoyable as possible.
+                Hi {(delivery.clientName || '').split(' ')[0]}! We're so excited for your delivery — it's almost time! Your new furniture is scheduled to arrive soon, and {delivery.deliveryTeam && delivery.deliveryTeam !== 'Unassigned' ? <strong>{delivery.deliveryTeam}</strong> : 'our staging team'} will be bringing it to you! We want to make sure the experience is as smooth and enjoyable as possible.
               </p>
             </div>
 
