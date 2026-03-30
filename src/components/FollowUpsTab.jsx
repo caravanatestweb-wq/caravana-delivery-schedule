@@ -35,6 +35,7 @@ export default function FollowUpsTab({ deliveries, updateDelivery }) {
 
   const typeConfig = {
     prep:   { label: 'Prep Guide', color: '#7c3aed', bg: '#f5f3ff', badgeLabel: '📱 Prep Invitation' },
+    day0:   { label: 'Day 0',    color: '#059669', bg: '#ecfdf5', badgeLabel: '🎉 Delivery Complete' },
     day1:   { label: 'Day 1',    color: '#0b7a4a', bg: '#eef7f0', badgeLabel: '😊 Day 1 Check-in' },
     day3:   { label: 'Day 3–5',  color: '#2563eb', bg: '#eef0f7', badgeLabel: '📋 Trial Reminder' },
     review: { label: 'Review',   color: '#c89b0a', bg: '#fef9ee', badgeLabel: '⭐ Review Request' },

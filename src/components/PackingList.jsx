@@ -271,16 +271,16 @@ export default function PackingList({ delivery, onClose, mode = 'warehouse', sto
                     />
                   </div>
                   {item.pullSource && (
-                    <div style={{ marginTop: 12, paddingLeft: 40, fontSize: 13, color: '#555' }}>
-                      <div style={{ display: 'inline-block', background: '#f3f4f6', padding: '6px 10px', borderRadius: 6, border: '1px solid #e5e7eb' }}>
-                        <strong style={{ color: '#000' }}>Pull From: </strong>
-                        <span style={{ color: '#2563eb', fontWeight: 600 }}>{item.pullSource}</span>
+                    <div style={{ marginTop: 12, paddingLeft: 40, fontSize: 13, color: '#333' }}>
+                      <div style={{ display: 'inline-block', background: '#fff', padding: '4px 8px', borderRadius: 4, border: '1.5px solid #000' }}>
+                        <strong style={{ color: '#000', textTransform: 'uppercase', fontSize: 11 }}>Pull From: </strong>
+                        <span style={{ color: '#000', fontWeight: 800 }}>{item.pullSource}</span>
                       </div>
                       
                       {item.pullSource === 'Vendor' && (item.vendorName || item.vendorPO || item.vendorDate) && (
-                        <div style={{ display: 'inline-block', marginLeft: 12, background: '#fef3c7', padding: '6px 10px', borderRadius: 6, border: '1px solid #fde68a' }}>
-                          <strong style={{ color: '#92400e' }}>Vendor Details: </strong>
-                          <span style={{ color: '#b45309', fontWeight: 600 }}>
+                        <div style={{ display: 'inline-block', marginLeft: 10, background: '#fff', padding: '4px 8px', borderRadius: 4, border: '1.5px solid #000' }}>
+                          <strong style={{ color: '#000', textTransform: 'uppercase', fontSize: 11 }}>Vendor: </strong>
+                          <span style={{ color: '#000', fontWeight: 700 }}>
                             {[item.vendorName, item.vendorPO ? `PO: ${item.vendorPO}` : null, item.vendorDate ? `Pickup: ${item.vendorDate}` : null].filter(Boolean).join(' • ')}
                           </span>
                         </div>
@@ -294,9 +294,15 @@ export default function PackingList({ delivery, onClose, mode = 'warehouse', sto
                   )}
                   <style>{`
                     @media print { 
-                      body * { visibility: hidden !important; }
-                      .packing-list-container, .packing-list-container * { visibility: visible !important; }
-                      .packing-list-container { position: absolute; left: 0; top: 0; width: 100%; height: auto; display: block !important; overflow: visible !important; }
+                      body { background: white !important; margin: 0 !important; padding: 0 !important; }
+                      .container { display: none !important; }
+                      .packing-list-container { 
+                        position: relative !important; 
+                        top: 0 !important; left: 0 !important; width: 100% !important; 
+                        height: auto !important; display: block !important; 
+                        overflow: visible !important; z-index: 1000 !important; 
+                        background: white !important; 
+                      }
                       .no-print { display: none !important; }
                       .print-only { display: block !important; }
                     }
