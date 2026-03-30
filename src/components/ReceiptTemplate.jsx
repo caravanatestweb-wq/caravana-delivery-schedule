@@ -12,18 +12,9 @@ export default function ReceiptTemplate({ delivery }) {
   const filledItems = items.filter(i => i.description || i.itemNumber);
 
   return (
-    <div id="receipt-pdf-template" style={{ 
-      width: 800, 
-      background: '#fff', 
-      padding: '50px 40px', 
-      boxSizing: 'border-box', 
-      fontFamily: 'Inter, Arial, sans-serif', 
-      color: '#111',
-      minHeight: 1040,   // Standard US Letter aspect ratio minimum bounding box for screen
-      position: 'relative'
-    }}>
+    <div id="receipt-pdf-template" className="receipt-pdf-container">
       {/* ── HEADER MAG ── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '3px solid #111', paddingBottom: 25, marginBottom: 35 }}>
+      <div className="receipt-header">
         <div>
           <img src="/logo.png" style={{ maxHeight: 70, objectFit: 'contain' }} alt="Caravana Furniture" />
           <div style={{ marginTop: 12, fontSize: 13, color: '#555', lineHeight: 1.5 }}>
@@ -45,7 +36,7 @@ export default function ReceiptTemplate({ delivery }) {
       </div>
 
       {/* ── METADATA GRID ── */}
-      <div style={{ display: 'flex', gap: 50, marginBottom: 45, fontSize: 15 }}>
+      <div className="receipt-meta-grid" style={{ fontSize: 15 }}>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: '#999', marginBottom: 6, letterSpacing: 0.5 }}>Client Information</div>
           <div style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 6 }} className="pl-serif">{delivery.clientName}</div>

@@ -22,7 +22,7 @@ export default function PackingList({ delivery, onClose, mode = 'warehouse', sto
 
   return (
     <div className={`packing-list-overlay ${isClient ? 'mode-client' : 'mode-warehouse'}`} style={{
-      position: 'fixed', inset: 0, zIndex: 3000, background: isClient ? '#fcfbf9' : '#fff', overflowY: 'auto', padding: isClient ? '0' : '40px 20px'
+      position: 'fixed', inset: 0, zIndex: 3000, background: isClient ? '#fcfbf9' : '#fff', color: '#111', overflowY: 'auto', padding: isClient ? '0' : '40px 20px'
     }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Inter:wght@300;400;500;600;700;800&display=swap');

@@ -108,3 +108,67 @@ input, select, textarea {
 .fade-in {
   animation: fadeIn 0.4s ease-out forwards;
 }
+
+/* Print Overrides and Responsive Mobile Wrapping for PDFs */
+.receipt-pdf-container {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  background: #fff;
+  padding: 5% 4%;
+  box-sizing: border-box;
+  font-family: 'Inter', Arial, sans-serif;
+  color: #111;
+  min-height: auto;
+  position: relative;
+}
+
+.receipt-meta-grid {
+  display: flex;
+  gap: 50px;
+  margin-bottom: 45px;
+}
+
+.receipt-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 3px solid #111;
+  padding-bottom: 25px;
+  margin-bottom: 35px;
+}
+
+@media (max-width: 700px) {
+  .receipt-meta-grid {
+    flex-direction: column;
+    gap: 25px;
+  }
+  .receipt-header {
+    flex-direction: column;
+    text-align: left;
+    gap: 15px;
+  }
+  .receipt-header > div {
+    text-align: left !important;
+  }
+}
+
+@media print {
+  .receipt-pdf-container {
+    width: 800px !important;
+    max-width: none !important;
+    padding: 50px 40px !important;
+    min-height: 1040px !important;
+  }
+  .receipt-meta-grid {
+    flex-direction: row !important;
+    gap: 50px !important;
+  }
+  .receipt-header {
+    flex-direction: row !important;
+    gap: 0 !important;
+  }
+  .receipt-header > div:last-child {
+    text-align: right !important;
+  }
+}
