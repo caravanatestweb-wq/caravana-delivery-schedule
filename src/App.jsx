@@ -149,7 +149,7 @@ function App() {
 
   // Update hash when state changes
   useEffect(() => {
-    if (publicPreviewId) return;
+    if (publicPreviewId || window.location.hash.includes('view=preview')) return;
 
     const params = new URLSearchParams();
     params.set('role', viewRole);
