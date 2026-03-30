@@ -38,14 +38,14 @@ export default function ReceiptTemplate({ delivery }) {
       {/* ── METADATA GRID ── */}
       <div className="receipt-meta-grid" style={{ fontSize: 15 }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: '#999', marginBottom: 6, letterSpacing: 0.5 }}>Client Information</div>
+          <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: '#666', marginBottom: 6, letterSpacing: 0.5 }}>Client Information</div>
           <div style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 6 }} className="pl-serif">{delivery.clientName}</div>
           <div style={{ color: '#444', lineHeight: 1.5 }}>{delivery.address}</div>
           <div style={{ color: '#444', marginTop: 4 }}>{delivery.phone}</div>
           {delivery.email && <div style={{ color: '#444', marginTop: 4 }}>{delivery.email}</div>}
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: '#999', marginBottom: 6, letterSpacing: 0.5 }}>Fulfillment Details</div>
+          <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: '#666', marginBottom: 6, letterSpacing: 0.5 }}>Fulfillment Details</div>
           <div style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 6 }} className="pl-serif">{delivery.deliveryTeam || 'Team Unassigned'}</div>
           <div style={{ marginTop: 4, color: '#444' }}><strong>Order Source:</strong> {delivery.source}</div>
           <div style={{ marginTop: 4, color: '#444' }}><strong>Time Window:</strong> {delivery.timeWindow}</div>
@@ -82,7 +82,7 @@ export default function ReceiptTemplate({ delivery }) {
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 'bold', fontSize: 16, color: '#111', lineHeight: 1.4 }}>{item.description || 'Unnamed Item'}</div>
-                  <div style={{ fontSize: 13, color: '#777', marginTop: 6, fontWeight: 500 }}>SKU/Item: {item.itemNumber || 'N/A'}</div>
+                  <div style={{ fontSize: 13, color: '#555', marginTop: 6, fontWeight: 600 }}>SKU/Item: {item.itemNumber || 'N/A'}</div>
                 </div>
                 <div style={{ padding: '0 20px', textAlign: 'center' }}>
                   <div style={{ fontSize: 12, color: '#888', textTransform: 'uppercase', marginBottom: 4, fontWeight: 700 }}>Qty</div>
@@ -106,7 +106,7 @@ export default function ReceiptTemplate({ delivery }) {
         marginBottom: 40,
         pageBreakInside: 'avoid'
       }}>
-        {delivery.trialEnabled !== false ? (
+        {delivery.trialEnabled === true ? (
           "The undersigned hereby acknowledges receipt and delivery of the goods described on the annexed invoice and confirms that all items have been inspected and received in satisfactory condition. Caravana's 7-Day Home Comfort Trial applies from the date of delivery. Exchanges are welcome within that window and are subject to a discounted service fee. Returns are subject to a 15% restocking fee plus a service fee based on item size; refunds are issued to the original payment method or as store credit. Clearance, custom, made-to-order, and mattress items are final sale and not eligible for the trial. Floor samples are sold as-is and are final sale."
         ) : (
           "The undersigned hereby acknowledges receipt and delivery of the goods described on the annexed invoice and confirms that all items have been inspected and received in satisfactory condition. All sales are final at the time of delivery. No cash refunds or exchanges will be issued once merchandise has been received. Exchanges may be considered within 48 hours of delivery on a case-by-case basis and are subject to item condition, availability, and applicable service fees. Floor samples are sold as-is and are final sale."

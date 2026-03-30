@@ -44,7 +44,7 @@ const DEFAULT_FORM_STATE = {
   notes: '',
   flagged: null,
   flagReason: '',
-  trialEnabled: true,
+  trialEnabled: false,
 };
 
 const SOURCES = ['Caravana store', 'Caravana Outlet', 'Caravana Web', 'LAHSA', 'HACLB', 'Synergy', 'Other'];
@@ -88,7 +88,7 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, o
 
       const trialEnabled = delivery.trialEnabled !== undefined
         ? delivery.trialEnabled
-        : !NO_TRIAL_SOURCES.includes(delivery.source);
+        : false; // Explicitly default new/unmarked records to false per user request
 
       setFormData({ ...DEFAULT_FORM_STATE, ...delivery, items, trialEnabled });
 
