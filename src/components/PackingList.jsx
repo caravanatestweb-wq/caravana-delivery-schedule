@@ -270,20 +270,36 @@ export default function PackingList({ delivery, onClose, mode = 'warehouse', sto
                       }} 
                     />
                   </div>
-                  <div style={{ marginTop: 12, paddingLeft: 40, fontSize: 13, color: '#555', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                    <strong style={{ color: '#000' }}>Pull From:</strong>
-                    <label style={{ cursor: 'pointer' }}><input type="radio" name={`source-${idx}`} style={{ marginRight: 4 }} />Showroom</label>
-                    <label style={{ cursor: 'pointer' }}><input type="radio" name={`source-${idx}`} style={{ marginRight: 4 }} />Outlet Showroom</label>
-                    <label style={{ cursor: 'pointer' }}><input type="radio" name={`source-${idx}`} style={{ marginRight: 4 }} />Warehouse</label>
-                    <label style={{ cursor: 'pointer' }}><input type="radio" name={`source-${idx}`} style={{ marginRight: 4 }} />Vendor Warehouse</label>
-                  </div>
+                  {item.pullSource && (
+                    <div style={{ marginTop: 12, paddingLeft: 40, fontSize: 13, color: '#555' }}>
+                      <div style={{ display: 'inline-block', background: '#f3f4f6', padding: '6px 10px', borderRadius: 6, border: '1px solid #e5e7eb' }}>
+                        <strong style={{ color: '#000' }}>Pull From: </strong>
+                        <span style={{ color: '#2563eb', fontWeight: 600 }}>{item.pullSource}</span>
+                      </div>
+                      
+                      {item.pullSource === 'Vendor' && (item.vendorName || item.vendorPO || item.vendorDate) && (
+                        <div style={{ display: 'inline-block', marginLeft: 12, background: '#fef3c7', padding: '6px 10px', borderRadius: 6, border: '1px solid #fde68a' }}>
+                          <strong style={{ color: '#92400e' }}>Vendor Details: </strong>
+                          <span style={{ color: '#b45309', fontWeight: 600 }}>
+                            {[item.vendorName, item.vendorPO ? `PO: ${item.vendorPO}` : null, item.vendorDate ? `Pickup: ${item.vendorDate}` : null].filter(Boolean).join(' • ')}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {pullNotes[idx] && (
                     <div className="print-only" style={{ display: 'none', marginTop: 5, paddingLeft: 40, fontSize: 12, color: '#c53030', fontWeight: 600 }}>
                       NOTE: {pullNotes[idx]}
                     </div>
                   )}
                   <style>{`
-                    @media print { .print-only { display: block !important; } }
+                    @media print { 
+                      body * { visibility: hidden !important; }
+                      .packing-list-container, .packing-list-container * { visibility: visible !important; }
+                      .packing-list-container { position: absolute; left: 0; top: 0; width: 100%; height: auto; display: block !important; overflow: visible !important; }
+                      .no-print { display: none !important; }
+                      .print-only { display: block !important; }
+                    }
                   `}</style>
                 </div>
               ))}

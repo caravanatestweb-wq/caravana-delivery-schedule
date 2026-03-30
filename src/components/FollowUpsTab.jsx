@@ -94,24 +94,24 @@ export default function FollowUpsTab({ deliveries, updateDelivery }) {
     setSending(null);
   };
 
-  if (followupItems.length === 0 && upcomingPrepItems.length === 0 && reviewedItems.length === 0) {
-    return (
-      <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-        <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
-        <div style={{ fontSize: 16, color: 'var(--text-light)' }}>All tasks and follow-ups are current!</div>
-      </div>
-    );
-  }
-
   return (
     <div>
       {/* TextMagic status — settings are in ⚙️ gear → Integrations */}
       <div style={{ fontSize: 12, color: 'var(--text-light)', marginBottom: 14 }}>
         📱 SMS via TextMagic:{' '}
         {hasCredentials
-          ? <span style={{ color: '#0b7a4a', fontWeight: 700 }}>✅ Connected — use ⚙️ Settings to manage</span>
-          : <span style={{ color: '#c53030', fontWeight: 700 }}>⚠️ Not configured — tap ⚙️ → Integrations to set up</span>}
+          ? <span style={{ color: '#0b7a4a', fontWeight: 700 }}>✅ Connected — click ⚙️ Settings at top right to manage</span>
+          : <span style={{ color: '#c53030', fontWeight: 700 }}>⚠️ Not configured — tap ⚙️ Settings at top right to set up</span>}
       </div>
+
+      {followupItems.length === 0 && upcomingPrepItems.length === 0 && reviewedItems.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
+          <div style={{ fontSize: 16, color: 'var(--text-light)' }}>All tasks and follow-ups are current!</div>
+        </div>
+      ) : (
+        <>
+
 
       {/* Upcoming Prep Guides Section */}
       {upcomingPrepItems.length > 0 && (
@@ -308,6 +308,8 @@ export default function FollowUpsTab({ deliveries, updateDelivery }) {
             </div>
           ))}
         </div>
+      )}
+      </>
       )}
     </div>
   );

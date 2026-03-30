@@ -200,7 +200,7 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, o
           } catch { alert('SMS failed — check TextMagic settings'); }
         } else {
           navigator.clipboard?.writeText(msg);
-          alert('📋 Guide message copied! (TextMagic not configured — go to Follow-ups tab → ⚙️ to set up)');
+          alert('📋 Guide message copied! (TextMagic not configured — click the ⚙️ Settings gear at the top right of the app to set up)');
         }
       } else {
         window.open(`mailto:${formData.email}?subject=Your Caravana Furniture Delivery Prep&body=${encodeURIComponent(msg)}`, '_blank');
@@ -498,7 +498,8 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, o
 
                 <div className="items-list">
                   {formData.items.map((item, idx) => (
-                    <div key={item.id} className="item-row" style={{ alignItems: 'center' }}>
+                    <div key={item.id} style={{ display: 'flex', flexDirection: 'column', marginBottom: 16 }}>
+                      <div className="item-row" style={{ alignItems: 'center', marginBottom: 0 }}>
                       <label className="item-image-upload" style={{ flex: '0 0 40px', width: 40, height: 40, background: 'var(--bg-color)', borderRadius: 6, border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', fontSize: 18 }}>
                         <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={async (e) => {
                           const file = e.target.files[0];
@@ -540,6 +541,32 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, o
                         ×
                       </button>
                     </div>
+
+                    {/* Pull Source Logistics Input */}
+                    <div style={{ background: '#f8fafc', padding: '10px 12px', borderRadius: 8, marginTop: 8, border: '1px solid #e2e8f0' }}>
+                      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: '#475569' }}>Pull From:</span>
+                        {['Showroom', 'Outlet', 'Warehouse', 'Vendor'].map(src => (
+                          <label key={src} style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
+                            <input 
+                              type="radio" 
+                              checked={item.pullSource === src}
+                              onChange={() => updateItem(item.id, 'pullSource', src)}
+                            /> {src}
+                          </label>
+                        ))}
+                      </div>
+                      
+                      {item.pullSource === 'Vendor' && (
+                        <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)', gap: 8 }}>
+                          <input type="text" placeholder="Vendor Name..." value={item.vendorName || ''} onChange={(e) => updateItem(item.id, 'vendorName', e.target.value)} style={{ padding: '6px 8px', fontSize: 12, border: '1px solid #cbd5e1', borderRadius: 4 }} />
+                          <input type="text" placeholder="PO / Order #..." value={item.vendorPO || ''} onChange={(e) => updateItem(item.id, 'vendorPO', e.target.value)} style={{ padding: '6px 8px', fontSize: 12, border: '1px solid #cbd5e1', borderRadius: 4 }} />
+                          <input type="date" value={item.vendorDate || ''} onChange={(e) => updateItem(item.id, 'vendorDate', e.target.value)} style={{ padding: '6px 8px', fontSize: 12, border: '1px solid #cbd5e1', borderRadius: 4 }} />
+                        </div>
+                      )}
+                    </div>
+
+                  </div>
                   ))}
                 </div>
               </section>
@@ -628,7 +655,7 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, o
                             }).then(() => alert('✅ Receipt SMS sent!')).catch(() => alert('SMS failed — check TextMagic settings'));
                           } else {
                             navigator.clipboard?.writeText(msg);
-                            alert('📋 Receipt copied! (TextMagic not configured — go to Follow-ups tab → ⚙️ to set up)');
+                            alert('📋 Receipt copied! (TextMagic not configured — click the ⚙️ Settings gear at the top right of the app to set up)');
                           }
                         }
                         if (formData.email) {
