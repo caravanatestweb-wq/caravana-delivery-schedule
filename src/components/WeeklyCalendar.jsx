@@ -68,7 +68,7 @@ const getItemChips = (delivery) => {
   return [];
 };
 
-export default function WeeklyCalendar({ deliveries, repairEvents = [], currentDate, onEditDelivery, onNewFromSlot, onPrev, onNext }) {
+export default function WeeklyCalendar({ deliveries, repairEvents = [], pickupEvents = [], currentDate, onEditDelivery, onSwitchTab, onNewFromSlot, onPrev, onNext }) {
   const weekStart = getStartOfWeek(currentDate);
   const days = getDaysOfWeek(weekStart);
 
@@ -95,14 +95,19 @@ export default function WeeklyCalendar({ deliveries, repairEvents = [], currentD
             (repairEvents || []).filter(r => r.returnDate === dayStr),
             r => timeToMinutes(r.returnTimeWindow)
           );
+          const dayPickups = sortByTime(
+            (pickupEvents || []).filter(p => p.date === dayStr),
+            p => timeToMinutes(p.time_window || p.timeWindow)
+          );
           // Merge and sort all events by time
           const allEvents = [
             ...dayDeliveries.map(d => ({ ...d, _type: 'delivery' })),
             ...dayRepairs.map(r => ({ ...r, _type: 'repair' })),
+            ...dayPickups.map(p => ({ ...p, _type: 'pickup' })),
           ].sort((a, b) => {
-            const tA = a._type === 'repair' ? timeToMinutes(a.returnTimeWindow) : timeToMinutes(a.timeWindow);
-            const tB = b._type === 'repair' ? timeToMinutes(b.returnTimeWindow) : timeToMinutes(b.timeWindow);
-            return tA - tB;
+            const timeA = a._type === 'repair' ? (a.returnTimeWindow || '11:59 PM') : (a._type === 'pickup' ? (a.time_window || a.timeWindow || '11:59 PM') : (a.timeWindow || '11:59 PM'));
+            const timeB = b._type === 'repair' ? (b.returnTimeWindow || '11:59 PM') : (b._type === 'pickup' ? (b.time_window || b.timeWindow || '11:59 PM') : (b.timeWindow || '11:59 PM'));
+            return timeToMinutes(timeA) - timeToMinutes(timeB);
           });
           const isToday = isSameDay(day, new Date());
           return (
@@ -135,6 +140,22 @@ export default function WeeklyCalendar({ deliveries, repairEvents = [], currentD
                       <div className="delivery-meta" style={{ color: '#c53030' }}>
                         <span>Repair</span>
                         {ev.status === 'Ready for Return' && <span style={{ fontWeight: 700 }}>✅ Ready</span>}
+                      </div>
+                    </div>
+                  ) : ev._type === 'pickup' ? (
+                    <div
+                      key={'p-' + ev.id}
+                      className="delivery-card"
+                      onClick={e => { e.stopPropagation(); if (onSwitchTab) onSwitchTab('active'); }}
+                      style={{ borderLeftColor: '#2563eb', background: '#eff6ff', cursor: 'pointer' }}
+                      title="Vendor Pickup"
+                    >
+                      <div className="delivery-time" style={{ color: '#1e3a8a' }}>
+                        🏭 {(ev.time_window || ev.timeWindow)?.split(' - ')[0]}
+                      </div>
+                      <div className="delivery-client" style={{ color: '#1e3a8a' }}>{ev.vendor_name}</div>
+                      <div className="delivery-meta" style={{ color: '#2563eb' }}>
+                        <span>Pickup • {ev.status}</span>
                       </div>
                     </div>
                   ) : (

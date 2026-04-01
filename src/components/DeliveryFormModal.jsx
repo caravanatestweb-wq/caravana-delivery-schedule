@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { sendTextMagicSMS } from '../lib/sms';
 import { addDays, fmtDate } from '../lib/constants';
 import './DeliveryFormModal.css';
 import ImagePreviewModal from './ImagePreviewModal';
@@ -190,13 +191,8 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, o
         const { username, apiKey } = { username: localStorage.getItem('tm_username'), apiKey: localStorage.getItem('tm_apikey') };
         if (username && apiKey && formData.phone) {
           const clean = formData.phone.replace(/\D/g,'');
-          const e164 = clean.startsWith('1') ? `+${clean}` : `+1${clean}`;
           try {
-            await fetch('https://rest.textmagic.com/api/v2/messages', {
-              method: 'POST',
-              headers: { 'X-TM-Username': username, 'X-TM-Key': apiKey, 'Content-Type': 'application/json' },
-              body: JSON.stringify({ text: msg, phones: e164 }),
-            });
+            await sendTextMagicSMS(formData.phone, msg, formData.id, 'preview');
             alert('✅ Prep Guide sent successfully!');
             setShowPrepPreview(false);
           } catch { alert('SMS failed — check TextMagic settings'); }
@@ -655,13 +651,9 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, o
                         if (formData.phone) {
                           const { username, apiKey } = { username: localStorage.getItem('tm_username'), apiKey: localStorage.getItem('tm_apikey') };
                           if (username && apiKey) {
-                            const clean = formData.phone.replace(/\D/g,'');
-                            const e164 = clean.startsWith('1') ? `+${clean}` : `+1${clean}`;
-                            fetch('https://rest.textmagic.com/api/v2/messages', {
-                              method: 'POST',
-                              headers: { 'X-TM-Username': username, 'X-TM-Key': apiKey, 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ text: msg, phones: e164 }),
-                            }).then(() => alert('✅ Receipt SMS sent!')).catch(() => alert('SMS failed — check TextMagic settings'));
+                            sendTextMagicSMS(formData.phone, msg, formData.id, 'receipt')
+                              .then(() => alert('✅ Receipt SMS sent!'))
+                              .catch(() => alert('SMS failed — check TextMagic settings or terminal logs.'));
                           } else {
                             navigator.clipboard?.writeText(msg);
                             alert('📋 Receipt copied! (TextMagic not configured — click the ⚙️ Settings gear at the top right of the app to set up)');

@@ -4,13 +4,14 @@ import TeamCalendarCarousel from './TeamCalendarCarousel';
 import { supabase } from '../lib/supabaseClient';
 import { localDate, fmtDate, sortDeliveriesByTime } from '../lib/constants';
 
-export default function TeamView({ deliveries, repairs = [], updateDelivery, onEditRepair }) {
+export default function TeamView({ deliveries, repairs = [], pickups = [], updateDelivery, onEditRepair }) {
   const [activeId, setActiveId] = useState(null);
   const [viewMode, setViewMode] = useState('list');
   const [filterTab, setFilterTab] = useState('active'); // active, today, returns, repairs, past
   const [searchQuery, setSearchQuery] = useState('');
   const [pastResults, setPastResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [groupByTeam, setGroupByTeam] = useState(false); // Toggle for swimlanes
   
   const today = localDate();
 
@@ -38,17 +39,31 @@ export default function TeamView({ deliveries, repairs = [], updateDelivery, onE
       clientName: r.clientName,
       address: r.appointmentType || 'Return / Repair Pickup',
       status: r.status,
+      deliveryTeam: r.team_id || '',
       flagged: 'repair pickup'
     }));
 
-  const mergedLive = [...deliveries, ...mappedRepairs];
+  const mappedPickups = pickups.map(p => ({
+      _type: 'pickup',
+      id: 'p-' + p.id,
+      originalPickup: p,
+      date: p.date || 'No Date',
+      timeWindow: p.timeWindow || '',
+      clientName: `🏭 ${p.vendor_name || 'Vendor'}`,
+      address: p.address || 'Vendor Warehouse',
+      status: p.status,
+      deliveryTeam: p.team_id || '',
+      flagged: 'pickup'
+  }));
+
+  const mergedLive = [...deliveries, ...mappedRepairs, ...mappedPickups];
 
   // Filtering based on tab
   let teamVisible = [];
   if (filterTab === 'active') {
     teamVisible = mergedLive.filter(d => 
       (!['Delivered','Archived','Completed', 'Returned'].includes(d.status)) &&
-      (d._type === 'repair' ? true : (['Scheduled', 'In Progress', 'Contacted', 'Ready'].includes(d.status) || d.flagged))
+      (d._type === 'repair' ? true : d._type === 'pickup' ? true : (['Scheduled', 'In Progress', 'Contacted', 'Ready'].includes(d.status) || d.flagged))
     );
   } else if (filterTab === 'today') {
     teamVisible = mergedLive.filter(d => d.date === today && !['Archived', 'Returned'].includes(d.status));
@@ -114,7 +129,7 @@ export default function TeamView({ deliveries, repairs = [], updateDelivery, onE
           { key: 'past', label: 'PAST', color: '#475569', bg: '#f8fafc', border: '#cbd5e1' },
         ].map(c => {
           let count = 0;
-          if (c.key === 'active') count = deliveries.filter(d => !['Delivered','Archived','Completed'].includes(d.status)).length + repairs.filter(r => r.status !== 'Returned').length;
+          if (c.key === 'active') count = deliveries.filter(d => !['Delivered','Archived','Completed'].includes(d.status)).length + repairs.filter(r => r.status !== 'Returned').length + pickups.filter(p => p.status !== 'Completed' && p.status !== 'Canceled').length;
           else if (c.key === 'today') count = mergedLive.filter(d => d.date === today && !['Archived', 'Returned'].includes(d.status)).length;
           else if (c.key === 'returns') count = deliveries.filter(d => ['return', 'exchange'].includes(d.flagged) && !['Delivered','Archived','Completed'].includes(d.status) && d.flagged !== 'repair').length;
           else if (c.key === 'repairs') count = repairs.filter(r => r.status !== 'Returned').length + deliveries.filter(d => (!['Delivered', 'Archived', 'Completed'].includes(d.status)) && (d.flagged === 'repair' || ['Repair on site', 'Schedule'].includes(d.status))).length;
@@ -187,16 +202,56 @@ export default function TeamView({ deliveries, repairs = [], updateDelivery, onE
       ) : (
         <>
           {/* Today */}
-          {todayStops.length > 0 && filterTab !== 'past' && (
-            <div style={{ marginBottom: 20 }}>
-              <h3 style={{ fontSize: 13, fontWeight: 700, color: '#0b7a4a', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
-                📅 Today — {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-              </h3>
-              {todayStops.map((d, i) => (
-                  <StopCard key={d.id} delivery={d} stopNum={i + 1} onSelect={() => d._type === 'repair' ? onEditRepair && onEditRepair(d.originalRepair) : setActiveId(d.id)} />
-              ))}
-            </div>
-          )}
+          {todayStops.length > 0 && filterTab !== 'past' && (() => {
+            const todayByTeam = todayStops.reduce((acc, d) => {
+              const team = d.deliveryTeam || 'Unassigned';
+              if (!acc[team]) acc[team] = [];
+              acc[team].push(d);
+              return acc;
+            }, {});
+            const teams = Object.keys(todayByTeam).sort((a,b) => {
+              if (a === 'Unassigned') return 1;
+              if (b === 'Unassigned') return -1;
+              return a.localeCompare(b);
+            });
+            return (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <h3 style={{ fontSize: 13, fontWeight: 700, color: '#0b7a4a', textTransform: 'uppercase', letterSpacing: 1 }}>
+                    📅 Today — {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                  </h3>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: 'var(--text-light)', cursor: 'pointer' }}>
+                    <input type="checkbox" checked={groupByTeam} onChange={e => setGroupByTeam(e.target.checked)} style={{ transform: 'scale(1.2)' }} />
+                    Split by Team
+                  </label>
+                </div>
+                
+                {groupByTeam ? (
+                  <div className="team-swimlanes" style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 10 }}>
+                    {teams.map((teamName) => (
+                      <div key={teamName} className="team-lane" style={{ flex: '1 1 320px', minWidth: 280, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 12 }}>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-main)', marginBottom: 12, paddingBottom: 8, borderBottom: '2px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span>🚚 {teamName}</span>
+                          <span style={{ background: '#eef2ff', color: '#4f46e5', padding: '2px 8px', borderRadius: 10, fontSize: 11 }}>
+                            {todayByTeam[teamName].length} stops
+                          </span>
+                        </div>
+                        {todayByTeam[teamName].map((d, i) => (
+                            <StopCard key={d.id} delivery={d} stopNum={i + 1} onSelect={() => d._type === 'repair' ? onEditRepair && onEditRepair(d.originalRepair) : (d._type === 'pickup' ? alert("Warehouse Pickups are managed via Command Center") : setActiveId(d.id))} showDate={false} />
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div>
+                    {todayStops.map((d, i) => (
+                        <StopCard key={d.id} delivery={d} stopNum={i + 1} onSelect={() => d._type === 'repair' ? onEditRepair && onEditRepair(d.originalRepair) : (d._type === 'pickup' ? alert("Warehouse Pickups are managed via Command Center") : setActiveId(d.id))} showDate={false} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Upcoming / Past — grouped by date */}
           {sortedOtherDates.filter(dateKey => filterTab !== 'today' || dateKey === today).map(dateKey => (
@@ -217,6 +272,25 @@ export default function TeamView({ deliveries, repairs = [], updateDelivery, onE
 
 function StopCard({ delivery: d, stopNum, onSelect, showDate }) {
   const isRepair = d._type === 'repair' || d.flagged === 'repair' || ['Repair on site', 'Schedule'].includes(d.status);
+  const isPickup = d._type === 'pickup';
+
+  if (isPickup) {
+    return (
+      <button onClick={onSelect} style={{ width: '100%', textAlign: 'left', background: '#eff6ff', border: '1px solid #bfdbfe', borderLeftWidth: 6, borderLeftColor: '#2563eb', borderRadius: 14, padding: '16px 18px', marginBottom: 10, boxShadow: 'var(--shadow-sm)', cursor: 'pointer' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+          <span style={{ fontSize: 12, fontWeight: 800, color: '#1e3a8a', textTransform: 'uppercase', letterSpacing: 0.5 }}>🏭 Vendor Pickup</span>
+          <span style={{ padding: '3px 10px', borderRadius: 10, fontSize: 11, fontWeight: 800, background: '#2563eb', color: '#fff', letterSpacing: 0.5 }}>PICKUP</span>
+        </div>
+        <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-main)', marginBottom: 4 }}>{d.clientName}</div>
+        <div style={{ fontSize: 13, color: 'var(--text-light)', marginBottom: 10 }}>{d.address}</div>
+        <div style={{ display: 'flex', gap: 14, fontSize: 13, color: 'var(--text-light)', flexWrap: 'wrap' }}>
+          {showDate && d.date && <span>📅 {fmtDate(d.date)}</span>}
+          {d.timeWindow && <span>🕐 {d.timeWindow}</span>}
+          <span>{d.status}</span>
+        </div>
+      </button>
+    );
+  }
   
   if (isRepair) {
     return (
@@ -225,7 +299,7 @@ function StopCard({ delivery: d, stopNum, onSelect, showDate }) {
         style={{
           width: '100%', textAlign: 'left',
           background: '#fef2f2',
-          border: '2px solid #fca5a5',
+          border: '1px solid #fca5a5',
           borderLeftWidth: 6,
           borderLeftColor: '#c53030',
           borderRadius: 14, padding: '16px 18px', marginBottom: 10,

@@ -114,6 +114,7 @@ export default function TeamCalendarCarousel({ deliveries, onEditDelivery }) {
                 ) : (
                   allEvents.map(ev => {
                     const isRepair = ev._type === 'repair';
+                    const isPickup = ev._type === 'pickup';
                     // REPAIR styling check
                     if (isRepair) {
                       return (
@@ -130,6 +131,26 @@ export default function TeamCalendarCarousel({ deliveries, onEditDelivery }) {
                           <div className="delivery-meta" style={{ display: 'flex', gap: 6 }}>
                              <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 6px', borderRadius: 4, background: '#c53030', color: '#fff', letterSpacing: 0.5 }}>REPAIR</span>
                              {ev.status === 'Ready for Return' && <span style={{ fontSize: 10, fontWeight: 700, color: '#0b7a4a' }}>✅ Ready</span>}
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    // PICKUP styling check
+                    if (isPickup) {
+                      return (
+                        <div
+                          key={'p-' + ev.id}
+                          className="delivery-card"
+                          onClick={() => onEditDelivery && onEditDelivery(ev)}
+                          style={{ borderLeftColor: '#2563eb', border: '1px solid #bfdbfe', background: '#eff6ff', cursor: 'pointer', marginBottom: 8 }}
+                        >
+                          <div className="delivery-time" style={{ color: '#1e3a8a' }}>
+                            🏭 {ev.timeWindow?.split(' - ')[0]}
+                          </div>
+                          <div className="delivery-client" style={{ color: '#1e3a8a' }}>{ev.clientName}</div>
+                          <div className="delivery-meta" style={{ display: 'flex', gap: 6 }}>
+                             <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 6px', borderRadius: 4, background: '#2563eb', color: '#fff', letterSpacing: 0.5 }}>PICKUP</span>
                           </div>
                         </div>
                       );

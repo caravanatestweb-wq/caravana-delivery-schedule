@@ -1,10 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export default function GlobalNotificationModal({ deliveries = [], repairs = [], teamAlerts = [] }) {
   const [isOpen, setIsOpen] = useState(false);
   const [pendingRepairs, setPendingRepairs] = useState([]);
   const [pendingReturns, setPendingReturns] = useState([]);
   const [unseenTeamAlerts, setUnseenTeamAlerts] = useState([]);
+
+  const triggeredRef = useRef(false);
+  const prevAlertCount = useRef(0);
 
   useEffect(() => {
     // 1. Calculate pending system issues
@@ -23,40 +26,53 @@ export default function GlobalNotificationModal({ deliveries = [], repairs = [],
     setPendingReturns(pReturns);
 
     // 2. Compute Unseen Team Alerts
-    const seenAlertIds = JSON.parse(localStorage.getItem('seen_team_alerts') || '[]');
+    let seenAlertIds = [];
+    try {
+      seenAlertIds = JSON.parse(localStorage.getItem('seen_team_alerts') || '[]');
+    } catch (e) { console.warn('localStorage is blocked (Incognito)'); }
+
     const unseen = teamAlerts.filter(a => !seenAlertIds.includes(a.id));
     setUnseenTeamAlerts(unseen);
 
+    // Reset loop ref if NEW alerts arrived
+    if (unseen.length > prevAlertCount.current) {
+      triggeredRef.current = false;
+    }
+    prevAlertCount.current = unseen.length;
+
     const systemIssuesCount = pRepairs.length + pLegacyRepairs.length + pReturns.length;
 
-    // 3. Auto-Trigger Logic
+    // 3. Auto-Trigger Logic (Avoid looping)
+    if (triggeredRef.current) return;
+
     if (unseen.length > 0) {
-      // DYNAMIC BYPASS: If there are unseen team alerts, force open immediately
-      const timer = setTimeout(() => setIsOpen(true), 1500);
+      // DYNAMIC BYPASS: Force open if any unseen alerts exist
+      const timer = setTimeout(() => { setIsOpen(true); triggeredRef.current = true; }, 1500);
       return () => clearTimeout(timer);
     } else if (systemIssuesCount > 0) {
-      // STANDARD THROTTLE: check local storage 6H snooze
-      const lastSeenStr = localStorage.getItem('notification_last_seen');
+      // STANDARD THROTTLE: 6H snooze
+      let lastSeenStr = null;
+      try { lastSeenStr = localStorage.getItem('notification_last_seen'); } catch (e) {}
+      
       const now = Date.now();
       if (!lastSeenStr || (now - parseInt(lastSeenStr, 10) > 21600000)) {
-        const timer = setTimeout(() => setIsOpen(true), 1500);
+        const timer = setTimeout(() => { setIsOpen(true); triggeredRef.current = true; }, 1500);
         return () => clearTimeout(timer);
       }
     }
   }, [deliveries, repairs, teamAlerts]);
 
   const handleAcknowledge = () => {
-    // Snooze standard system alerts
-    localStorage.setItem('notification_last_seen', Date.now().toString());
+    try {
+      localStorage.setItem('notification_last_seen', Date.now().toString());
+      if (unseenTeamAlerts.length > 0) {
+        const previouslySeen = JSON.parse(localStorage.getItem('seen_team_alerts') || '[]');
+        const newSeen = [...previouslySeen, ...unseenTeamAlerts.map(a => a.id)];
+        localStorage.setItem('seen_team_alerts', JSON.stringify(newSeen));
+      }
+    } catch(e) { console.warn('Could not save acknowledge to localStorage'); }
     
-    // Silence current active Team Alerts
-    if (unseenTeamAlerts.length > 0) {
-      const previouslySeen = JSON.parse(localStorage.getItem('seen_team_alerts') || '[]');
-      const newSeen = [...previouslySeen, ...unseenTeamAlerts.map(a => a.id)];
-      localStorage.setItem('seen_team_alerts', JSON.stringify(newSeen));
-      setUnseenTeamAlerts([]);
-    }
-
+    setUnseenTeamAlerts([]);
     setIsOpen(false);
   };
 
@@ -65,13 +81,14 @@ export default function GlobalNotificationModal({ deliveries = [], repairs = [],
 
   return (
     <>
+      {totalIssues > 0 && (
       <button 
         onClick={() => setIsOpen(true)}
         className="no-print fade-in"
         title="Pending Actions Feed"
         style={{
           position: 'fixed', bottom: 20, right: 20, zIndex: 9000, 
-          background: totalIssues > 0 ? '#c53030' : '#475569', color: '#fff', 
+          background: '#c53030', color: '#fff', 
           border: 'none', borderRadius: '50%', width: 50, height: 50, 
           boxShadow: '0 4px 12px rgba(0,0,0,0.3)', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24,
@@ -80,17 +97,16 @@ export default function GlobalNotificationModal({ deliveries = [], repairs = [],
         onMouseOver={e => e.currentTarget.style.transform = 'scale(1.1)'}
         onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
       >
-        {totalIssues > 0 ? '🚨' : '✅'}
-        {totalIssues > 0 && (
-          <span style={{ 
-            position: 'absolute', top: -5, right: -2, background: '#fff', color: '#c53030', 
-            borderRadius: '50%', width: 22, height: 22, fontSize: 13, fontWeight: 900,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-          }}>
-            {totalIssues}
-          </span>
-        )}
+        🚨
+        <span style={{ 
+          position: 'absolute', top: -5, right: -2, background: '#fff', color: '#c53030', 
+          borderRadius: '50%', width: 22, height: 22, fontSize: 13, fontWeight: 900,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+        }}>
+          {totalIssues}
+        </span>
       </button>
+      )}
 
       {isOpen && (
     <div 

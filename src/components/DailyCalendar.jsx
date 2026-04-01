@@ -43,7 +43,7 @@ const getItemChips = (delivery) => {
   return [];
 };
 
-export default function DailyCalendar({ deliveries, repairEvents = [], currentDate, onEditDelivery, onNewFromSlot, onPrev, onNext }) {
+export default function DailyCalendar({ deliveries, repairEvents = [], pickupEvents = [], currentDate, onEditDelivery, onSwitchTab, onNewFromSlot, onPrev, onNext }) {
   const [dragStart, setDragStart] = useState(null);
   const [dragEnd, setDragEnd] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -52,6 +52,14 @@ export default function DailyCalendar({ deliveries, repairEvents = [], currentDa
 
   const dayStr = currentDate.getFullYear() + '-' + String(currentDate.getMonth() + 1).padStart(2, '0') + '-' + String(currentDate.getDate()).padStart(2, '0');
   const dayDeliveries = deliveries.filter(d => d.date === dayStr);
+  const dayRepairs = repairEvents.filter(r => r.returnDate === dayStr);
+  const dayPickups = pickupEvents.filter(p => p.date === dayStr);
+  
+  const allEvents = [
+    ...dayDeliveries.map(d => ({ ...d, _type: 'delivery' })),
+    ...dayRepairs.map(r => ({ ...r, _type: 'repair' })),
+    ...dayPickups.map(p => ({ ...p, _type: 'pickup' })),
+  ];
 
   // Touch swipe for day navigation
   const handleTouchStart = e => { touchStartX.current = e.touches[0].clientX; };
@@ -128,47 +136,72 @@ export default function DailyCalendar({ deliveries, repairEvents = [], currentDa
             </div>
           ))}
 
-          {dayDeliveries.map(delivery => {
-            const indices = getTimeWindowIndices(delivery.timeWindow);
+          {allEvents.map(ev => {
+            const timeStr = ev._type === 'repair' ? ev.returnTimeWindow : ev.timeWindow;
+            const indices = getTimeWindowIndices(timeStr);
             if (!indices) return null;
-            const chips = getItemChips(delivery);
+            
+            if (ev._type === 'repair') {
+               return (
+                 <div key={`r-${ev.id}`} className="delivery-block" onClick={() => onSwitchTab && onSwitchTab('repairs')}
+                      style={{ top: `${indices.start * SLOT_HEIGHT}px`, height: `${(indices.end - indices.start) * SLOT_HEIGHT}px`, zIndex: 5, background: '#fef2f2', borderLeft: '4px solid #c53030' }}>
+                   <div className="delivery-block-content">
+                     <div className="delivery-block-time" style={{ color: '#c53030' }}>🔧 {timeStr}</div>
+                     <div className="delivery-block-client" style={{ color: '#c53030' }}>{ev.clientName}</div>
+                   </div>
+                 </div>
+               );
+            }
+            if (ev._type === 'pickup') {
+               return (
+                 <div key={`p-${ev.id}`} className="delivery-block" onClick={() => onSwitchTab && onSwitchTab('active')}
+                      style={{ top: `${indices.start * SLOT_HEIGHT}px`, height: `${(indices.end - indices.start) * SLOT_HEIGHT}px`, zIndex: 5, background: '#eff6ff', borderLeft: '4px solid #2563eb' }}>
+                   <div className="delivery-block-content">
+                     <div className="delivery-block-time" style={{ color: '#1e3a8a' }}>🏭 {timeStr}</div>
+                     <div className="delivery-block-client" style={{ color: '#1e3a8a' }}>{ev.vendor_name}</div>
+                   </div>
+                 </div>
+               );
+            }
+
+            const chips = getItemChips(ev);
             return (
               <div
-                key={delivery.id}
-                className={`delivery-block status-${(delivery.status || 'scheduled').toLowerCase()}`}
+                key={ev.id}
+                className={`delivery-block status-${(ev.status || 'scheduled').toLowerCase()}`}
                 style={{ 
                   top: `${indices.start * SLOT_HEIGHT}px`, height: `${(indices.end - indices.start) * SLOT_HEIGHT}px`, zIndex: 5,
-                  ...(delivery.flagged === 'repair' || ['Repair on site', 'Schedule'].includes(delivery.status) ? { background: '#fef2f2', borderLeft: '4px solid #c53030' } : {})
+                  ...(ev.flagged === 'repair' || ['Repair on site', 'Schedule'].includes(ev.status) ? { background: '#fef2f2', borderLeft: '4px solid #c53030' } : {})
                 }}
-                onClick={() => onEditDelivery(delivery)}
+                onClick={() => onEditDelivery(ev)}
               >
                 <div className="delivery-block-content">
-                  <div className="delivery-block-time">{delivery.timeWindow}</div>
-                  <div className="delivery-block-client">{delivery.clientName}</div>
+                  <div className="delivery-block-time">{ev.timeWindow}</div>
+                  <div className="delivery-block-client">{ev.clientName}</div>
 
                   {/* Status & Flag Badges */}
                   <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
                     <span style={{ 
                       fontSize: 10, fontWeight: 700, padding: '1px 4px', 
-                      borderRadius: 4, background: getStatusColor(delivery.status) + '20', 
-                      color: getStatusColor(delivery.status), border: `1px solid ${getStatusColor(delivery.status)}40`,
+                      borderRadius: 4, background: getStatusColor(ev.status) + '20', 
+                      color: getStatusColor(ev.status), border: `1px solid ${getStatusColor(ev.status)}40`,
                       textTransform: 'uppercase'
                     }}>
-                      {delivery.status}
+                      {ev.status}
                     </span>
-                    {delivery.flagged && (
+                    {ev.flagged && (
                       <span style={{ 
                         fontSize: 10, fontWeight: 700, padding: '1px 4px', 
                         borderRadius: 4, 
-                        background: delivery.flagged === 'repair' ? '#fef2f2' : '#f5f3ff', 
-                        color: delivery.flagged === 'repair' ? '#c53030' : '#7c3aed', 
-                        border: `1px solid ${delivery.flagged === 'repair' ? '#fca5a5' : '#c4b5fd'}`,
+                        background: ev.flagged === 'repair' ? '#fef2f2' : '#f5f3ff', 
+                        color: ev.flagged === 'repair' ? '#c53030' : '#7c3aed', 
+                        border: `1px solid ${ev.flagged === 'repair' ? '#fca5a5' : '#c4b5fd'}`,
                         textTransform: 'uppercase'
                       }}>
-                        {delivery.flagged === 'repair' ? '🔧 ' : '🔄 '}{delivery.flagged}
+                        {ev.flagged === 'repair' ? '🔧 ' : '🔄 '}{ev.flagged}
                       </span>
                     )}
-                    {delivery.orderSource === 'online' && (
+                    {ev.orderSource === 'online' && (
                       <span style={{ 
                         fontSize: 10, fontWeight: 700, padding: '1px 4px', 
                         borderRadius: 4, background: '#eff6ff', color: '#2563eb', border: '1px solid #dbeafe',
@@ -190,32 +223,13 @@ export default function DailyCalendar({ deliveries, repairEvents = [], currentDa
                     </div>
                   )}
                   <div className="delivery-block-meta">
-                    {delivery.source}{delivery.deliveryTeam ? ` • 👥 ${delivery.deliveryTeam}` : ''} • {delivery.address?.split(',')[0]}
+                    {ev.source}{ev.deliveryTeam ? ` • 👥 ${ev.deliveryTeam}` : ''} • {ev.address?.split(',')[0]}
                   </div>
                   <div className="delivery-block-bottom">
-                    📞 {delivery.phone}
-                    {delivery.orderSource === 'online' && <span className="online-badge" style={{ marginLeft: 6 }}>WEB</span>}
-                    {delivery.notes && <span className="notes-tag">📝 notes</span>}
+                    📞 {ev.phone}
+                    {ev.orderSource === 'online' && <span className="online-badge" style={{ marginLeft: 6 }}>WEB</span>}
+                    {ev.notes && <span className="notes-tag">📝 notes</span>}
                   </div>
-                </div>
-              </div>
-            );
-          })}
-
-          {/* Repair return events as red blocks */}
-          {(repairEvents || []).filter(r => r.returnDate === dayStr && r.returnTimeWindow).map(repair => {
-            const indices = getTimeWindowIndices(repair.returnTimeWindow);
-            if (!indices) return null;
-            return (
-              <div key={'r-' + repair.id}
-                className="delivery-block"
-                onClick={() => onSwitchTab && onSwitchTab('repairs')}
-                style={{ top: `${indices.start * SLOT_HEIGHT}px`, height: `${Math.max((indices.end - indices.start) * SLOT_HEIGHT, 60)}px`, zIndex: 5, background: '#fef2f2', borderLeft: '4px solid #c53030', cursor: 'pointer' }}
-              >
-                <div className="delivery-block-content">
-                  <div className="delivery-block-time" style={{ color: '#c53030' }}>🔧 {repair.returnTimeWindow}</div>
-                  <div className="delivery-block-client">{repair.clientName}</div>
-                  <div className="delivery-block-meta">Repair {repair.status === 'Ready for Return' ? '✅' : ''}</div>
                 </div>
               </div>
             );

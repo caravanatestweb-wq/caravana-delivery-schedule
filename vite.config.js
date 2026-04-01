@@ -48,4 +48,13 @@ export default defineConfig({
     })
   ],
   base: '/',
+  server: {
+    proxy: {
+      '/proxy-tm': {
+        target: 'https://rest.textmagic.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/proxy-tm/, '/api/v2')
+      }
+    }
+  }
 })

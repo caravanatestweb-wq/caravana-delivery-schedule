@@ -5,6 +5,7 @@ import MonthlyCalendar from './components/MonthlyCalendar';
 import DailyCalendar from './components/DailyCalendar';
 import DeliveryFormModal from './components/DeliveryFormModal';
 import RepairFormModal from './components/RepairFormModal';
+import PickupFormModal from './components/PickupFormModal';
 import RepairsScheduleTab from './components/RepairsScheduleTab';
 import StatsBar from './components/StatsBar';
 import TeamView from './components/TeamView';
@@ -15,7 +16,7 @@ import PackingList from './components/PackingList';
 import ReceiptTemplate from './components/ReceiptTemplate';
 import GlobalNotificationModal from './components/GlobalNotificationModal';
 import ImagePreviewModal from './components/ImagePreviewModal';
-import TeamAlertBuilderModal from './components/TeamAlertBuilderModal';
+import CommandCenterModal from './components/CommandCenterModal';
 import { supabase } from './lib/supabaseClient';
 import { localDate, getFollowUpType, sortDeliveriesByTime, fmtDate, getStatusBg, getStatusColor } from './lib/constants';
 import './App.css';
@@ -102,7 +103,10 @@ function App() {
   const [editingRepair, setEditingRepair] = useState(null);
   const [teamMembers, setTeamMembers] = useState([]);
   const [teamAlerts, setTeamAlerts] = useState([]);
-  const [isAlertBuilderOpen, setIsAlertBuilderOpen] = useState(false);
+  const [pickups, setPickups] = useState([]);
+  const [isPickupModalOpen, setIsPickupModalOpen] = useState(false);
+  const [editingPickup, setEditingPickup] = useState(null);
+  const [isCommandCenterOpen, setIsCommandCenterOpen] = useState(false);
   const [viewMode, setViewMode] = useState('weekly');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showArchive, setShowArchive] = useState(false);
@@ -248,6 +252,10 @@ function App() {
       const { data } = await supabase.from('repairs').select('*');
       if (data) setRepairs(data);
     };
+    const loadPickups = async () => {
+      const { data } = await supabase.from('vendor_pickups').select('*');
+      if (data) setPickups(data);
+    };
     const loadTeam = async () => {
       const { data } = await supabase.from('team_members').select('name').order('name');
       if (data) setTeamMembers(data.map(m => m.name));
@@ -261,6 +269,7 @@ function App() {
     loadRepairs();
     loadTeam();
     loadAlerts();
+    loadPickups();
 
     // 2. Real-time Subscription
     const channel = supabase
@@ -278,6 +287,14 @@ function App() {
       .channel('team-alerts-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'team_alerts' }, () => {
         loadAlerts();
+      })
+      .subscribe();
+
+    // 2C. Pickups Subscription
+    const pickupsChannel = supabase
+      .channel('pickups-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'vendor_pickups' }, () => {
+        loadPickups();
       })
       .subscribe();
 
@@ -329,6 +346,41 @@ function App() {
     const { error } = await supabase.from('repairs').delete().eq('id', id);
     if (error) alert('Error deleting repair: ' + error.message);
     else { setRepairs(prev => prev.filter(r => r.id !== id)); handleCloseRepairModal(); }
+  };
+
+  // Pickup handlers
+  const handleOpenNewPickup = () => { setEditingPickup(null); setIsPickupModalOpen(true); };
+  const handleEditPickup = (p) => { setEditingPickup(p); setIsPickupModalOpen(true); };
+  const handleClosePickupModal = () => setIsPickupModalOpen(false);
+  const handleDeletePickup = async (id) => {
+    if (!window.confirm("Delete this pickup?")) return;
+    const { error } = await supabase.from('vendor_pickups').delete().eq('id', id);
+    if (error) alert("Error deleting pickup: " + error.message);
+    else setPickups(prev => prev.filter(p => p.id !== id));
+    setIsPickupModalOpen(false);
+  };
+  const handleSavePickup = async (formData) => {
+    let err;
+    if (formData.id) { 
+      const { error } = await supabase.from('vendor_pickups').update(formData).eq('id', formData.id); 
+      err = error;
+      if (!error) setPickups(prev => prev.map(p => p.id === formData.id ? formData : p));
+    } 
+    else { 
+      // Ensure we don't send id=null on insert
+      const payload = { ...formData };
+      delete payload.id;
+      const { error, data } = await supabase.from('vendor_pickups').insert([payload]).select(); 
+      err = error;
+      if (!error && data) setPickups(prev => [...prev, ...data]);
+    }
+
+    if (err) {
+      alert("Error saving pickup: " + err.message + "\n\nDetails: " + JSON.stringify(err.details));
+      console.error(err);
+    } else {
+      setIsPickupModalOpen(false);
+    }
   };
 
   const handleSaveDelivery = async (deliveryData) => {
@@ -490,11 +542,11 @@ function App() {
             </div>
             <button
               className="btn btn-secondary"
-              title="Dispatch Team Alert"
-              onClick={() => setIsAlertBuilderOpen(true)}
+              title="Dispatch Command Center"
+              onClick={() => setIsCommandCenterOpen(true)}
               style={{ fontWeight: 800, color: '#c53030', borderColor: '#fca5a5', background: '#fef2f2', marginLeft: 'auto' }}
             >
-              📣 Dispatch Alert
+              🕹️ Command Center
             </button>
             {/* Settings gear */}
             <button
@@ -511,6 +563,7 @@ function App() {
                 >
                   📦 Archive ({archivedDeliveries.length})
                 </button>
+                <button className="btn-secondary" onClick={handleOpenNewPickup} style={{ color: '#2563eb', borderColor: '#bfdbfe' }}>🏭 Pickup</button>
                 <button className="btn-primary" onClick={handleOpenNewModal}>+ New Delivery</button>
               </>
             )}
@@ -526,7 +579,7 @@ function App() {
         {showSettings && <TeamSettings onClose={() => setShowSettings(false)} />}
 
         {viewRole === 'team' && (
-          <TeamView deliveries={liveDeliveries} repairs={repairs} updateDelivery={updateDelivery} onEditRepair={handleEditRepair} />
+          <TeamView deliveries={liveDeliveries} repairs={repairs} pickups={pickups.filter(p => p.status !== 'Canceled')} updateDelivery={updateDelivery} onEditRepair={handleEditRepair} />
         )}
 
         {/* ── OFFICE MODE ── */}
@@ -646,9 +699,9 @@ function App() {
                       </button>
                     </div>
                     <main>
-                      {viewMode === 'daily' && <DailyCalendar deliveries={liveDeliveries} repairEvents={repairs.filter(r => r.returnDate)} currentDate={currentDate} onEditDelivery={handleEditDelivery} onNewFromSlot={handleNewFromSlot} onPrev={handlePrev} onNext={handleNext} onSwitchTab={setActiveTab} />}
-                      {viewMode === 'weekly' && <WeeklyCalendar deliveries={liveDeliveries} repairEvents={repairs.filter(r => r.returnDate)} currentDate={currentDate} onEditDelivery={handleEditDelivery} onNewFromSlot={handleNewFromSlot} onPrev={handlePrev} onNext={handleNext} onSwitchTab={setActiveTab} />}
-                      {viewMode === 'monthly' && <MonthlyCalendar deliveries={liveDeliveries} repairEvents={repairs.filter(r => r.returnDate)} currentDate={currentDate} onEditDelivery={handleEditDelivery} onNewFromSlot={handleNewFromSlot} onPrev={handlePrev} onNext={handleNext} onSwitchTab={setActiveTab} />}
+                      {viewMode === 'daily' && <DailyCalendar deliveries={liveDeliveries} repairEvents={repairs.filter(r => r.returnDate)} pickupEvents={pickups.filter(p => p.status !== 'Canceled')} currentDate={currentDate} onEditDelivery={handleEditDelivery} onNewFromSlot={handleNewFromSlot} onPrev={handlePrev} onNext={handleNext} onSwitchTab={setActiveTab} />}
+                      {viewMode === 'weekly' && <WeeklyCalendar deliveries={liveDeliveries} repairEvents={repairs.filter(r => r.returnDate)} pickupEvents={pickups.filter(p => p.status !== 'Canceled')} currentDate={currentDate} onEditDelivery={handleEditDelivery} onNewFromSlot={handleNewFromSlot} onPrev={handlePrev} onNext={handleNext} onSwitchTab={setActiveTab} />}
+                      {viewMode === 'monthly' && <MonthlyCalendar deliveries={liveDeliveries} repairEvents={repairs.filter(r => r.returnDate)} pickupEvents={pickups.filter(p => p.status !== 'Canceled')} currentDate={currentDate} onEditDelivery={handleEditDelivery} onNewFromSlot={handleNewFromSlot} onPrev={handlePrev} onNext={handleNext} onSwitchTab={setActiveTab} />}
                     </main>
                   </>
                 )}
@@ -659,6 +712,10 @@ function App() {
                     ...repairs.filter(r => !['Returned'].includes(r.status)).map(r => ({
                       ...r, _type: 'repair', id: 'r-' + r.id, originalRepair: r,
                       date: r.returnDate || '9999-12-31', timeWindow: r.appointmentType || ''
+                    })),
+                    ...pickups.filter(p => !['Completed', 'Canceled'].includes(p.status)).map(p => ({
+                      ...p, _type: 'pickup', id: 'p-' + p.id, originalPickup: p,
+                      clientName: p.vendor_name, date: p.date || '9999-12-31', timeWindow: p.time_window || ''
                     }))
                   ];
                   return (
@@ -668,24 +725,25 @@ function App() {
                     </h3>
                     {sortDeliveriesByTime(combinedActive).map((d, i, arr) => {
                       const isRepair = d._type === 'repair' || d.flagged === 'repair' || ['Repair on site', 'Schedule'].includes(d.status);
+                      const isPickup = d._type === 'pickup';
                       return (
-                        <div key={d.id} onClick={() => d._type === 'repair' ? handleEditRepair(d.originalRepair) : handleEditDelivery(d, arr)} style={{ 
-                          background: 'var(--surface)', borderRadius: 12, border: `1px solid ${isRepair ? '#fca5a5' : 'var(--border)'}`, 
-                          borderLeftWidth: isRepair ? 6 : 1, borderLeftColor: isRepair ? '#c53030' : 'var(--border)',
+                        <div key={d.id} onClick={() => isPickup ? handleEditPickup(d.originalPickup) : (d._type === 'repair' ? handleEditRepair(d.originalRepair) : handleEditDelivery(d, arr))} style={{ 
+                          background: isPickup ? '#eff6ff' : 'var(--surface)', borderRadius: 12, border: `1px solid ${isPickup ? '#bfdbfe' : (isRepair ? '#fca5a5' : 'var(--border)')}`, 
+                          borderLeftWidth: isRepair || isPickup ? 6 : 1, borderLeftColor: isPickup ? '#2563eb' : (isRepair ? '#c53030' : 'var(--border)'),
                           padding: '14px 16px', marginBottom: 10, cursor: 'pointer', display: 'flex', 
                           justifyContent: 'space-between', alignItems: 'center', boxShadow: 'var(--shadow-sm)'
                         }}>
                           <div>
-                            <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-main)' }}>{d.clientName}</div>
+                            <div style={{ fontWeight: 700, fontSize: 15, color: isPickup ? '#1e3a8a' : 'var(--text-main)' }}>{isPickup && '🏭 '}{d.clientName}</div>
                             <div style={{ fontSize: 12, color: 'var(--text-light)', marginTop: 2 }}>
                               {fmtDate(d.date) === 'NaN/NaN/NaN' ? 'Unscheduled' : fmtDate(d.date)} • {d.timeWindow} • Queue #{i+1}
                             </div>
                           </div>
                           <span style={{ 
                             fontSize: 10, fontWeight: 700, padding: '4px 8px', borderRadius: 4, 
-                            background: isRepair ? '#fef2f2' : getStatusBg(d.status), color: isRepair ? '#c53030' : getStatusColor(d.status),
-                            border: `1px solid ${isRepair ? '#fca5a5' : getStatusColor(d.status)}40`, textTransform: 'uppercase'
-                          }}>{isRepair ? '🔧 REPAIR' : d.status}</span>
+                            background: isPickup ? '#dbeafe' : (isRepair ? '#fef2f2' : getStatusBg(d.status)), color: isPickup ? '#1e3a8a' : (isRepair ? '#c53030' : getStatusColor(d.status)),
+                            border: `1px solid ${isPickup ? '#bfdbfe' : (isRepair ? '#fca5a5' : getStatusColor(d.status))}40`, textTransform: 'uppercase'
+                          }}>{isPickup ? '🏭 PICKUP' : (isRepair ? '🔧 REPAIR' : d.status)}</span>
                         </div>
                       );
                     })}
@@ -720,10 +778,11 @@ function App() {
 
       <GlobalNotificationModal deliveries={liveDeliveries} repairs={repairs} teamAlerts={teamAlerts} />
 
-      {isAlertBuilderOpen && (
-        <TeamAlertBuilderModal
-          onClose={() => setIsAlertBuilderOpen(false)}
+      {isCommandCenterOpen && (
+        <CommandCenterModal
+          onClose={() => setIsCommandCenterOpen(false)}
           teamMembers={teamMembers}
+          teamAlerts={teamAlerts}
         />
       )}
 
@@ -742,6 +801,14 @@ function App() {
         onSave={handleSaveRepair}
         onDelete={handleDeleteRepair}
         repair={editingRepair}
+        teamMembers={teamMembers}
+      />
+      <PickupFormModal
+        isOpen={isPickupModalOpen}
+        onClose={handleClosePickupModal}
+        onSave={handleSavePickup}
+        onDelete={handleDeletePickup}
+        pickup={editingPickup}
         teamMembers={teamMembers}
       />
 
