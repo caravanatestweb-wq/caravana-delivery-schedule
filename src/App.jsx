@@ -494,7 +494,7 @@ function App() {
 
         {/* ── TEAM MODE ── */}
         {viewRole === 'team' && (
-          <TeamView deliveries={liveDeliveries} updateDelivery={updateDelivery} />
+          <TeamView deliveries={liveDeliveries} repairs={repairs} updateDelivery={updateDelivery} />
         )}
 
         {/* ── OFFICE MODE ── */}

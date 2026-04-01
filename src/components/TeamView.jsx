@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import TeamDeliveryForm from './TeamDeliveryForm';
+import WeeklyCalendar from './WeeklyCalendar';
 import { localDate, fmtDate, sortDeliveriesByTime } from '../lib/constants';
 
-export default function TeamView({ deliveries, updateDelivery }) {
+export default function TeamView({ deliveries, repairs = [], updateDelivery }) {
   const [activeId, setActiveId] = useState(null);
+  const [viewMode, setViewMode] = useState('list');
+  const [currentDate, setCurrentDate] = useState(new Date());
   const today = localDate();
 
   const active = deliveries.find(d => d.id === activeId);
@@ -44,8 +47,56 @@ export default function TeamView({ deliveries, updateDelivery }) {
   };
 
   return (
-    <div>
-      {teamVisible.length === 0 ? (
+    <div className="team-center-container" style={{ paddingBottom: 40 }}>
+      {/* Placement Cards */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 18 }}>
+        {[
+          { key: 'active', label: 'ACTIVE', color: '#0b7a4a', bg: '#eef7f0', border: '#a7f0d4' },
+          { key: 'today', label: 'TODAY', color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
+          { key: 'returns', label: 'RETURNS', color: '#c53030', bg: '#fef2f2', border: '#fca5a5' },
+          { key: 'repairs', label: 'REPAIRS', color: '#7c3aed', bg: '#f5f3ff', border: '#c4b5fd' },
+        ].map(c => {
+          const count = c.key === 'active' ? deliveries.filter(d => !['Delivered','Archived','Completed'].includes(d.status)).length :
+                        c.key === 'today' ? deliveries.filter(d => d.date === today && d.status !== 'Archived').length :
+                        c.key === 'returns' ? deliveries.filter(d => ['return', 'exchange', 'repair'].includes(d.flagged) && !['Delivered','Archived','Completed'].includes(d.status)).length :
+                        repairs.filter(r => r.status !== 'Returned').length;
+          return (
+            <div key={c.key} style={{ 
+              flex: 1, background: c.bg, border: `1px solid ${c.border}`, borderRadius: 12, padding: '12px 2px', 
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+            }}>
+              <span style={{ fontSize: 18, fontWeight: 800, color: c.color, lineHeight: 1 }}>{count}</span>
+              <span style={{ fontSize: 9, fontWeight: 800, color: c.color, marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>{c.label}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display: 'flex', background: 'var(--surface)', padding: 4, borderRadius: 10, border: '1px solid var(--border)', marginBottom: 20 }}>
+        <button 
+          onClick={() => setViewMode('list')}
+          style={{ flex: 1, padding: '8px 16px', borderRadius: 8, border: 'none', background: viewMode === 'list' ? 'var(--primary)' : 'transparent', color: viewMode === 'list' ? '#fff' : 'var(--text-light)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+        >List</button>
+        <button 
+          onClick={() => setViewMode('calendar')}
+          style={{ flex: 1, padding: '8px 16px', borderRadius: 8, border: 'none', background: viewMode === 'calendar' ? 'var(--primary)' : 'transparent', color: viewMode === 'calendar' ? '#fff' : 'var(--text-light)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+        >Calendar</button>
+      </div>
+
+      {viewMode === 'calendar' ? (
+        <div style={{ background: 'var(--surface)', borderRadius: 14, overflow: 'hidden', border: '1px solid var(--border)' }}>
+          <WeeklyCalendar 
+            deliveries={teamVisible}
+            repairEvents={repairs.filter(r => r.returnDate)}
+            currentDate={currentDate}
+            onEditDelivery={(d) => setActiveId(d.id)}
+            onPrev={() => { const d = new Date(currentDate); d.setDate(d.getDate() - 7); setCurrentDate(d); }}
+            onNext={() => { const d = new Date(currentDate); d.setDate(d.getDate() + 7); setCurrentDate(d); }}
+          />
+        </div>
+      ) : teamVisible.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 20px' }}>
           <div style={{ fontSize: 48, marginBottom: 12 }}>🚛</div>
           <div style={{ fontSize: 16, color: 'var(--text-light)' }}>No deliveries assigned</div>
