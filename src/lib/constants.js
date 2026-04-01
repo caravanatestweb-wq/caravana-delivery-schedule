@@ -160,9 +160,12 @@ const parseTimeToMinutes = (timeStr = '') => {
   return hrs * 60 + mins;
 };
 
-// Sort deliveries/repairs by their first time window
 export const sortDeliveriesByTime = (list = []) => {
   return [...list].sort((a, b) => {
+    const aDate = a.date || '9999-12-31';
+    const bDate = b.date || '9999-12-31';
+    if (aDate !== bDate) return aDate.localeCompare(bDate);
+    
     const aTime = parseTimeToMinutes((a.timeWindow || '').split(' - ')[0]);
     const bTime = parseTimeToMinutes((b.timeWindow || b.returnTimeWindow || '').split(' - ')[0]);
     return aTime - bTime;

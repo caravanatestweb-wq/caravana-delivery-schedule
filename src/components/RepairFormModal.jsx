@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import ImagePreviewModal from './ImagePreviewModal';
 
 const getLocalDateString = (date = new Date()) =>
   date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
 
-const STATUSES = ['Picked Up', 'In Repair', 'Ready for Return', 'Returned'];
+const STATUSES = ['Schedule', 'Picked Up', 'Repair on site', 'In Repair', 'Ready for Return', 'Returned'];
 const TIME_WINDOWS = [
   '08:00 AM - 10:00 AM','10:00 AM - 12:00 PM',
   '12:00 PM - 02:00 PM','02:00 PM - 04:00 PM',
@@ -15,13 +16,15 @@ const EMPTY = {
   clientName: '', phone: '', email: '', address: '',
   description: '', pickupDate: getLocalDateString(),
   estimatedCompletion: '', returnDate: '', returnTimeWindow: '10:00 AM - 12:00 PM',
-  status: 'Picked Up', team: '', techNotes: '', clientNotes: '',
+  appointmentType: 'Return to client',
+  status: 'Schedule', team: '', techNotes: '', clientNotes: '',
   repairCost: '', warranty: false, photoUrls: [],
 };
 
 export default function RepairFormModal({ isOpen, onClose, onSave, onDelete, repair, teamMembers = [] }) {
   const [form, setForm] = useState(EMPTY);
   const [uploading, setUploading] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -55,7 +58,9 @@ export default function RepairFormModal({ isOpen, onClose, onSave, onDelete, rep
   };
 
   const statusColor = {
+    'Schedule': '#8b5cf6',
     'Picked Up': '#c89b0a',
+    'Repair on site': '#ec4899',
     'In Repair': '#2563eb',
     'Ready for Return': '#059669',
     'Returned': '#6b7280',
@@ -148,15 +153,23 @@ export default function RepairFormModal({ isOpen, onClose, onSave, onDelete, rep
 
                 {/* Return delivery — shows on calendar */}
                 <div style={{ marginTop: '1rem', padding: '12px 14px', background: 'linear-gradient(135deg, #f5f3ff, #ede9fe)', borderRadius: 10, border: '1.5px solid #c4b5fd' }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
-                    📅 Return to Client — Shows on Calendar
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#c53030', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
+                    📅 Calendar Appointment
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 10 }}>
+                    <label>Action Type</label>
+                    <select name="appointmentType" value={form.appointmentType || 'Return to client'} onChange={handle}>
+                      <option value="Pick up from client">Pick up from client</option>
+                      <option value="Appointment to be repair onsite">Appointment to be repair onsite</option>
+                      <option value="Return to client">Return to client</option>
+                    </select>
                   </div>
                   <div className="form-group">
-                    <label>Return Date *</label>
+                    <label>Appointment Date *</label>
                     <input type="date" name="returnDate" value={form.returnDate} onChange={handle} required />
                   </div>
                   <div className="form-group" style={{ marginTop: '0.6rem' }}>
-                    <label>Return Time Window</label>
+                    <label>Time Window</label>
                     <select name="returnTimeWindow" value={form.returnTimeWindow} onChange={handle}>
                       {TIME_WINDOWS.map(w => <option key={w} value={w}>{w}</option>)}
                     </select>
@@ -172,7 +185,13 @@ export default function RepairFormModal({ isOpen, onClose, onSave, onDelete, rep
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {STATUSES.map(s => (
                       <button key={s} type="button"
-                        onClick={() => setForm(p => ({ ...p, status: s }))}
+                        onClick={() => {
+                          let newApType = form.appointmentType || 'Return to client';
+                          if (s === 'Schedule') newApType = 'Pick up from client';
+                          if (s === 'Repair on site') newApType = 'Appointment to be repair onsite';
+                          if (s === 'Ready for Return' || s === 'Returned') newApType = 'Return to client';
+                          setForm(p => ({ ...p, status: s, appointmentType: newApType }));
+                        }}
                         style={{
                           padding: '7px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'inherit',
                           border: `1.5px solid ${form.status === s ? statusColor[s] : 'var(--border)'}`,
@@ -204,7 +223,7 @@ export default function RepairFormModal({ isOpen, onClose, onSave, onDelete, rep
                 <div className="photo-preview-grid">
                   {(form.photoUrls || []).map((url, i) => (
                     <div key={i} className="photo-preview-item">
-                      <img src={url} alt="repair" />
+                      <img src={url} alt="repair" style={{ cursor: 'pointer' }} onClick={() => setPreviewImage(url)} />
                       <button type="button" className="photo-remove-btn"
                         onClick={() => setForm(p => ({ ...p, photoUrls: p.photoUrls.filter((_, j) => j !== i) }))}>
                         ×
@@ -237,6 +256,7 @@ export default function RepairFormModal({ isOpen, onClose, onSave, onDelete, rep
           </div>
         </form>
       </div>
+      <ImagePreviewModal imageUrl={previewImage} onClose={() => setPreviewImage(null)} />
     </div>
   );
 }

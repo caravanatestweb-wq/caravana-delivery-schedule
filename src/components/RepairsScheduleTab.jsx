@@ -1,7 +1,9 @@
 import { useState } from 'react';
 
 const STATUS_CONFIG = {
+  'Schedule':        { color: '#8b5cf6', bg: '#f5f3ff', icon: '📝' },
   'Picked Up':       { color: '#c89b0a', bg: '#fef9ee', icon: '📥' },
+  'Repair on site':  { color: '#ec4899', bg: '#fdf2f8', icon: '🛠️' },
   'In Repair':       { color: '#2563eb', bg: '#eff6ff', icon: '🔧' },
   'Ready for Return':{ color: '#059669', bg: '#ecfdf5', icon: '✅' },
   'Returned':        { color: '#6b7280', bg: '#f9fafb', icon: '🏠' },
@@ -146,11 +148,11 @@ export default function RepairsScheduleTab({ repairs, onNew, onEdit }) {
                   {r.returnDate && (
                     <div style={{
                       textAlign: 'center', minWidth: 90, padding: '10px 14px',
-                      background: isOverdue ? '#fef2f2' : '#f5f3ff',
-                      border: `1.5px solid ${isOverdue ? '#c53030' : '#c4b5fd'}`,
+                      background: isOverdue ? '#fef2f2' : '#fef2f2',
+                      border: `1.5px solid ${isOverdue ? '#991b1b' : '#fca5a5'}`,
                       borderRadius: 10, flexShrink: 0,
                     }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: isOverdue ? '#c53030' : '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: isOverdue ? '#c53030' : '#c53030', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                         {isOverdue ? '⚠️ Overdue' : daysUntilReturn === 0 ? '📅 Today' : daysUntilReturn === 1 ? '📅 Tomorrow' : `📅 ${daysUntilReturn}d`}
                       </div>
                       <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-main)', marginTop: 2 }}>

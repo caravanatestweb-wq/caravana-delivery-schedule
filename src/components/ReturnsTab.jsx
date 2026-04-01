@@ -2,7 +2,7 @@ import { supabase } from '../lib/supabaseClient';
 import { ITEM_TIERS, daysBetween, fmtDate, localDate } from '../lib/constants';
 
 const FLAG_CONFIG = {
-  return:   { label: '🔴 Return',   color: '#c53030', bg: '#fef2f2' },
+  return:   { label: '🟣 Return',   color: '#7c3aed', bg: '#f5f3ff' },
   exchange: { label: '🟡 Exchange', color: '#c89b0a', bg: '#fef9ee' },
   repair:   { label: '🟣 Repair',   color: '#9333ea', bg: '#f5f0ff' },
 };

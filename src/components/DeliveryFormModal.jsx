@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { addDays, fmtDate } from '../lib/constants';
 import './DeliveryFormModal.css';
+import ImagePreviewModal from './ImagePreviewModal';
 
 const getLocalDateString = (date = new Date()) =>
   date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
@@ -55,7 +56,7 @@ const HOUR_OPTIONS = [
   '04:00 PM','05:00 PM','06:00 PM'
 ];
 
-export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, onArchive, delivery, allDeliveries = [] }) {
+export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, onArchive, delivery, allDeliveries = [], onPrev, onNext }) {
   const [formData, setFormData] = useState(DEFAULT_FORM_STATE);
   const [customStart, setCustomStart] = useState(null);
   const [customEnd, setCustomEnd] = useState(null);
@@ -63,6 +64,7 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, o
   const [teamMembers, setTeamMembers] = useState([]);
   const [otherSource, setOtherSource] = useState('');
   const [showPrepPreview, setShowPrepPreview] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
 
   const TIME_WINDOWS = [
     '08:00 AM - 10:00 AM','10:00 AM - 12:00 PM',
@@ -241,6 +243,13 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, o
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <h2 className="modal-title">{delivery ? 'Edit Delivery' : 'New Delivery'}</h2>
+            {(onPrev || onNext) && (
+              <div style={{ display: 'flex', background: 'var(--bg-color)', borderRadius: 8, padding: 2, border: '1px solid var(--border)', marginLeft: 8 }}>
+                <button type="button" onClick={onPrev} disabled={!onPrev} style={{ padding: '4px 12px', border: 'none', background: 'transparent', cursor: onPrev ? 'pointer' : 'default', opacity: onPrev ? 1 : 0.4, fontSize: 13, fontWeight: 700, color: 'var(--text-main)' }}>← Prev</button>
+                <div style={{ width: 1, background: 'var(--border)', margin: '4px 0' }} />
+                <button type="button" onClick={onNext} disabled={!onNext} style={{ padding: '4px 12px', border: 'none', background: 'transparent', cursor: onNext ? 'pointer' : 'default', opacity: onNext ? 1 : 0.4, fontSize: 13, fontWeight: 700, color: 'var(--text-main)' }}>Next →</button>
+              </div>
+            )}
             {delivery && (
               <button type="button" 
                 onClick={() => setFormData(p => ({ ...p, locked: !p.locked }))}
@@ -457,7 +466,7 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, o
                   <div style={{ marginTop: '1rem' }}>
                     <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 6 }}>Post-Delivery Flag</label>
                     <div style={{ display: 'flex', gap: 6 }}>
-                      {[['return', '🔴 Return', '#c53030'], ['exchange', '🟡 Exchange', '#c89b0a'], ['repair', '🟣 Repair', '#9333ea']].map(([v, lbl, col]) => (
+                      {[['return', '🟣 Return', '#7c3aed'], ['exchange', '🟡 Exchange', '#c89b0a'], ['repair', '🔴 Repair', '#c53030']].map(([v, lbl, col]) => (
                         <button key={v} type="button"
                           onClick={() => setFormData(p => ({ ...p, flagged: p.flagged === v ? null : v, flagDate: getLocalDateString() }))}
                           style={{
@@ -513,7 +522,7 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, o
                           } else alert('Upload error: ' + error.message);
                           setIsUploading(false);
                         }} />
-                        {item.imageUrl ? <img src={item.imageUrl} alt="item" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '📷'}
+                        {item.imageUrl ? <img src={item.imageUrl} alt="item" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setPreviewImage(item.imageUrl); }} /> : '📷'}
                       </label>
                       <input
                         type="text"
@@ -577,7 +586,7 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, o
                 <div className="photo-preview-grid">
                   {(formData.photoUrls || []).map((url, i) => (
                     <div key={i} className="photo-preview-item">
-                      <img src={url} alt="delivery" />
+                      <img src={url} alt="delivery" style={{ cursor: 'pointer' }} onClick={() => setPreviewImage(url)} />
                       <button type="button" className="photo-remove-btn" onClick={() => removePhoto(url)}>×</button>
                     </div>
                   ))}
@@ -678,6 +687,7 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, o
         </form>
         {showPrepPreview && renderSmsPreview()}
       </div>
+      <ImagePreviewModal imageUrl={previewImage} onClose={() => setPreviewImage(null)} />
     </div>
   );
 }

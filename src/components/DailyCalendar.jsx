@@ -136,7 +136,10 @@ export default function DailyCalendar({ deliveries, repairEvents = [], currentDa
               <div
                 key={delivery.id}
                 className={`delivery-block status-${(delivery.status || 'scheduled').toLowerCase()}`}
-                style={{ top: `${indices.start * SLOT_HEIGHT}px`, height: `${(indices.end - indices.start) * SLOT_HEIGHT}px`, zIndex: 5 }}
+                style={{ 
+                  top: `${indices.start * SLOT_HEIGHT}px`, height: `${(indices.end - indices.start) * SLOT_HEIGHT}px`, zIndex: 5,
+                  ...(delivery.flagged === 'repair' || ['Repair on site', 'Schedule'].includes(delivery.status) ? { background: '#fef2f2', borderLeft: '4px solid #c53030' } : {})
+                }}
                 onClick={() => onEditDelivery(delivery)}
               >
                 <div className="delivery-block-content">
@@ -156,10 +159,13 @@ export default function DailyCalendar({ deliveries, repairEvents = [], currentDa
                     {delivery.flagged && (
                       <span style={{ 
                         fontSize: 10, fontWeight: 700, padding: '1px 4px', 
-                        borderRadius: 4, background: '#fee2e2', color: '#c53030', border: '1px solid #fecaca',
+                        borderRadius: 4, 
+                        background: delivery.flagged === 'repair' ? '#fef2f2' : '#f5f3ff', 
+                        color: delivery.flagged === 'repair' ? '#c53030' : '#7c3aed', 
+                        border: `1px solid ${delivery.flagged === 'repair' ? '#fca5a5' : '#c4b5fd'}`,
                         textTransform: 'uppercase'
                       }}>
-                        🔄 {delivery.flagged}
+                        {delivery.flagged === 'repair' ? '🔧 ' : '🔄 '}{delivery.flagged}
                       </span>
                     )}
                     {delivery.orderSource === 'online' && (
@@ -196,7 +202,7 @@ export default function DailyCalendar({ deliveries, repairEvents = [], currentDa
             );
           })}
 
-          {/* Repair return events as purple blocks */}
+          {/* Repair return events as red blocks */}
           {(repairEvents || []).filter(r => r.returnDate === dayStr && r.returnTimeWindow).map(repair => {
             const indices = getTimeWindowIndices(repair.returnTimeWindow);
             if (!indices) return null;
@@ -204,12 +210,12 @@ export default function DailyCalendar({ deliveries, repairEvents = [], currentDa
               <div key={'r-' + repair.id}
                 className="delivery-block"
                 onClick={() => onSwitchTab && onSwitchTab('repairs')}
-                style={{ top: `${indices.start * SLOT_HEIGHT}px`, height: `${Math.max((indices.end - indices.start) * SLOT_HEIGHT, 60)}px`, zIndex: 5, background: '#f5f3ff', borderLeft: '4px solid #7c3aed', cursor: 'pointer' }}
+                style={{ top: `${indices.start * SLOT_HEIGHT}px`, height: `${Math.max((indices.end - indices.start) * SLOT_HEIGHT, 60)}px`, zIndex: 5, background: '#fef2f2', borderLeft: '4px solid #c53030', cursor: 'pointer' }}
               >
                 <div className="delivery-block-content">
-                  <div className="delivery-block-time" style={{ color: '#7c3aed' }}>🔧 {repair.returnTimeWindow}</div>
+                  <div className="delivery-block-time" style={{ color: '#c53030' }}>🔧 {repair.returnTimeWindow}</div>
                   <div className="delivery-block-client">{repair.clientName}</div>
-                  <div className="delivery-block-meta">Repair Return {repair.status === 'Ready for Return' ? '✅' : ''}</div>
+                  <div className="delivery-block-meta">Repair {repair.status === 'Ready for Return' ? '✅' : ''}</div>
                 </div>
               </div>
             );

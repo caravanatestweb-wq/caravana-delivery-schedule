@@ -6,6 +6,7 @@ import ETAPanel from './ETAPanel';
 import StylingTipsPanel from './StylingTipsPanel';
 import { getTMCredentials, sendTextMagicSMS } from '../lib/sms';
 import ReceiptTemplate from './ReceiptTemplate';
+import ImagePreviewModal from './ImagePreviewModal';
 
 const LEGAL_TEXT = `The undersigned hereby acknowledges receipt and delivery of the goods described on the annexed list or invoice and further acknowledges that said goods have been inspected and are delivered without damage. Any concealed damages or manufacturing defects must be reported within 24 hours. The customer acknowledges that outside of the approved 7-Day trial items, there are absolutely no cash refunds or exchanges after the merchandise has been received, assembled, or removed from original packaging.
 
@@ -568,6 +569,7 @@ export default function TeamDeliveryForm({ delivery, onBack, updateDelivery }) {
 function PhotoCapture({ deliveryId, existingUrls, onUpdate }) {
   const [urls, setUrls] = useState(existingUrls || []);
   const [uploading, setUploading] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
 
   const handleAdd = async (e) => {
     const files = Array.from(e.target.files);
@@ -592,7 +594,7 @@ function PhotoCapture({ deliveryId, existingUrls, onUpdate }) {
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
         {urls.map((url, i) => (
           <div key={i} style={{ position: 'relative', width: 72, height: 72, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border)' }}>
-            <img src={url} alt="delivery" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <img src={url} alt="delivery" style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }} onClick={() => setPreviewImage(url)} />
             <button
               onClick={() => { const u = urls.filter((_, j) => j !== i); setUrls(u); onUpdate(u); }}
               style={{ position: 'absolute', top: 1, right: 1, width: 18, height: 18, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -609,6 +611,7 @@ function PhotoCapture({ deliveryId, existingUrls, onUpdate }) {
           <span style={{ fontSize: 10, color: 'var(--text-light)' }}>{uploading ? 'Uploading' : 'Add'}</span>
         </label>
       </div>
+      <ImagePreviewModal imageUrl={previewImage} onClose={() => setPreviewImage(null)} />
     </div>
   );
 }

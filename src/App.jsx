@@ -13,6 +13,9 @@ import ReturnsTab from './components/ReturnsTab';
 import TeamSettings from './components/TeamSettings';
 import PackingList from './components/PackingList';
 import ReceiptTemplate from './components/ReceiptTemplate';
+import GlobalNotificationModal from './components/GlobalNotificationModal';
+import ImagePreviewModal from './components/ImagePreviewModal';
+import TeamAlertBuilderModal from './components/TeamAlertBuilderModal';
 import { supabase } from './lib/supabaseClient';
 import { localDate, getFollowUpType, sortDeliveriesByTime, fmtDate, getStatusBg, getStatusColor } from './lib/constants';
 import './App.css';
@@ -98,6 +101,8 @@ function App() {
   const [isRepairModalOpen, setIsRepairModalOpen] = useState(false);
   const [editingRepair, setEditingRepair] = useState(null);
   const [teamMembers, setTeamMembers] = useState([]);
+  const [teamAlerts, setTeamAlerts] = useState([]);
+  const [isAlertBuilderOpen, setIsAlertBuilderOpen] = useState(false);
   const [viewMode, setViewMode] = useState('weekly');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showArchive, setShowArchive] = useState(false);
@@ -108,6 +113,8 @@ function App() {
   const [printMode, setPrintMode] = useState('warehouse');
   const [publicPreviewId, setPublicPreviewId] = useState(null);
   const [publicReceiptId, setPublicReceiptId] = useState(null);
+  const [previewArchiveImg, setPreviewArchiveImg] = useState(null);
+  const [activeNavList, setActiveNavList] = useState([]);
 
   // ── Print Packing List Event ────────────────────────────────
   useEffect(() => {
@@ -245,8 +252,15 @@ function App() {
       const { data } = await supabase.from('team_members').select('name').order('name');
       if (data) setTeamMembers(data.map(m => m.name));
     };
+    const loadAlerts = async () => {
+      const now = new Date().toISOString();
+      const { data } = await supabase.from('team_alerts').select('*').gt('expires_at', now);
+      if (data) setTeamAlerts(data);
+    };
+
     loadRepairs();
     loadTeam();
+    loadAlerts();
 
     // 2. Real-time Subscription
     const channel = supabase
@@ -259,7 +273,18 @@ function App() {
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    // 2B. Alerts Subscription (Isolated channel to respect Core Logic Lock)
+    const alertsChannel = supabase
+      .channel('team-alerts-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'team_alerts' }, () => {
+        loadAlerts();
+      })
+      .subscribe();
+
+    return () => { 
+      supabase.removeChannel(channel); 
+      supabase.removeChannel(alertsChannel);
+    };
   }, []);
 
   const handleOpenNewModal = () => { setEditingDelivery(null); setIsModalOpen(true); };
@@ -463,6 +488,14 @@ function App() {
                 🚛 Delivery Team Center
               </button>
             </div>
+            <button
+              className="btn btn-secondary"
+              title="Dispatch Team Alert"
+              onClick={() => setIsAlertBuilderOpen(true)}
+              style={{ fontWeight: 800, color: '#c53030', borderColor: '#fca5a5', background: '#fef2f2', marginLeft: 'auto' }}
+            >
+              📣 Dispatch Alert
+            </button>
             {/* Settings gear */}
             <button
               title="Team Settings"
@@ -492,9 +525,8 @@ function App() {
 
         {showSettings && <TeamSettings onClose={() => setShowSettings(false)} />}
 
-        {/* ── TEAM MODE ── */}
         {viewRole === 'team' && (
-          <TeamView deliveries={liveDeliveries} repairs={repairs} updateDelivery={updateDelivery} />
+          <TeamView deliveries={liveDeliveries} repairs={repairs} updateDelivery={updateDelivery} onEditRepair={handleEditRepair} />
         )}
 
         {/* ── OFFICE MODE ── */}
@@ -519,7 +551,7 @@ function App() {
                         {(d.photoUrls || []).length > 0 && (
                           <div className="archive-card-photos">
                             {d.photoUrls.map((url, i) => (
-                              <img key={i} src={url} alt="delivery" className="archive-thumb" onClick={e => { e.stopPropagation(); window.open(url, '_blank'); }} />
+                              <img key={i} src={url} alt="delivery" className="archive-thumb" onClick={e => { e.stopPropagation(); setPreviewArchiveImg(url); }} />
                             ))}
                           </div>
                         )}
@@ -550,8 +582,7 @@ function App() {
                       setCurrentDate(new Date());
                     }
                     else if (key === 'active') {
-                      setActiveTab('calendar');
-                      // Potentially filter for active? For now just go to calendar.
+                      setActiveTab('active');
                     }
                     else setActiveTab('calendar');
                   }}
@@ -576,7 +607,7 @@ function App() {
                   <button className={`office-tab ${activeTab === 'repairs' ? 'active' : ''}`} onClick={() => setActiveTab('repairs')}>
                     🔧 Repairs
                     {repairs.filter(r => r.status !== 'Returned').length > 0 && (
-                      <span className="office-tab-badge" style={{ background: '#7c3aed' }}>
+                      <span className="office-tab-badge" style={{ background: '#c53030' }}>
                         {repairs.filter(r => r.status !== 'Returned').length}
                       </span>
                     )}
@@ -622,36 +653,48 @@ function App() {
                   </>
                 )}
 
-                {activeTab === 'active' && (
+                {activeTab === 'active' && (() => {
+                  const combinedActive = [
+                    ...liveDeliveries.filter(d => !['Delivered', 'Completed'].includes(d.status)),
+                    ...repairs.filter(r => !['Returned'].includes(r.status)).map(r => ({
+                      ...r, _type: 'repair', id: 'r-' + r.id, originalRepair: r,
+                      date: r.returnDate || '9999-12-31', timeWindow: r.appointmentType || ''
+                    }))
+                  ];
+                  return (
                   <div className="active-deliveries-list" style={{ padding: '0 4px' }}>
                     <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 16 }}>
-                      Active Deliveries ({liveDeliveries.filter(d => !['Delivered', 'Completed'].includes(d.status)).length})
+                      Active Queue ({combinedActive.length})
                     </h3>
-                    {sortDeliveriesByTime(liveDeliveries.filter(d => !['Delivered', 'Completed'].includes(d.status)))
-                      .map((d, i) => (
-                        <div key={d.id} onClick={() => handleEditDelivery(d)} style={{ 
-                          background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--border)', 
+                    {sortDeliveriesByTime(combinedActive).map((d, i, arr) => {
+                      const isRepair = d._type === 'repair' || d.flagged === 'repair' || ['Repair on site', 'Schedule'].includes(d.status);
+                      return (
+                        <div key={d.id} onClick={() => d._type === 'repair' ? handleEditRepair(d.originalRepair) : handleEditDelivery(d, arr)} style={{ 
+                          background: 'var(--surface)', borderRadius: 12, border: `1px solid ${isRepair ? '#fca5a5' : 'var(--border)'}`, 
+                          borderLeftWidth: isRepair ? 6 : 1, borderLeftColor: isRepair ? '#c53030' : 'var(--border)',
                           padding: '14px 16px', marginBottom: 10, cursor: 'pointer', display: 'flex', 
                           justifyContent: 'space-between', alignItems: 'center', boxShadow: 'var(--shadow-sm)'
                         }}>
                           <div>
                             <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-main)' }}>{d.clientName}</div>
                             <div style={{ fontSize: 12, color: 'var(--text-light)', marginTop: 2 }}>
-                              {fmtDate(d.date)} • {d.timeWindow} • Stop #{i+1}
+                              {fmtDate(d.date) === 'NaN/NaN/NaN' ? 'Unscheduled' : fmtDate(d.date)} • {d.timeWindow} • Queue #{i+1}
                             </div>
                           </div>
                           <span style={{ 
                             fontSize: 10, fontWeight: 700, padding: '4px 8px', borderRadius: 4, 
-                            background: getStatusBg(d.status), color: getStatusColor(d.status),
-                            border: `1px solid ${getStatusColor(d.status)}40`, textTransform: 'uppercase'
-                          }}>{d.status}</span>
+                            background: isRepair ? '#fef2f2' : getStatusBg(d.status), color: isRepair ? '#c53030' : getStatusColor(d.status),
+                            border: `1px solid ${isRepair ? '#fca5a5' : getStatusColor(d.status)}40`, textTransform: 'uppercase'
+                          }}>{isRepair ? '🔧 REPAIR' : d.status}</span>
                         </div>
-                    ))}
+                      );
+                    })}
                   </div>
-                )}
+                  );
+                })()}
 
                 {activeTab === 'followups' && (
-                  <FollowUpsTab deliveries={liveDeliveries} updateDelivery={updateDelivery} />
+                  <FollowUpsTab deliveries={liveDeliveries} updateDelivery={updateDelivery} onEditDelivery={handleEditDelivery} />
                 )}
 
                 {activeTab === 'returns' && (
@@ -674,6 +717,15 @@ function App() {
           </>
         )}
       </div>
+
+      <GlobalNotificationModal deliveries={liveDeliveries} repairs={repairs} teamAlerts={teamAlerts} />
+
+      {isAlertBuilderOpen && (
+        <TeamAlertBuilderModal
+          onClose={() => setIsAlertBuilderOpen(false)}
+          teamMembers={teamMembers}
+        />
+      )}
 
       <DeliveryFormModal
         isOpen={isModalOpen}
@@ -700,6 +752,7 @@ function App() {
           onClose={() => setPrintingDelivery(null)}
         />
       )}
+      <ImagePreviewModal imageUrl={previewArchiveImg} onClose={() => setPreviewArchiveImg(null)} />
     </>
   );
 }

@@ -53,17 +53,21 @@ export default function MonthlyCalendar({ deliveries, currentDate, onEditDeliver
                     className={`delivery-card status-${(delivery.status || 'scheduled').toLowerCase()}`}
                     onClick={(e) => { 
                       e.stopPropagation(); 
-                      if (delivery.flagged) onSwitchTab && onSwitchTab('returns');
+                      if (delivery.flagged === 'repair') onSwitchTab && onSwitchTab('repairs');
+                      else if (delivery.flagged) onSwitchTab && onSwitchTab('returns');
                       else onEditDelivery(delivery); 
                     }}
-                    style={{ padding: '0.25rem 0.5rem', marginBottom: '0.25rem', cursor: 'pointer', fontSize: '0.7rem' }}
+                    style={{ 
+                      padding: '0.25rem 0.5rem', marginBottom: '0.25rem', cursor: 'pointer', fontSize: '0.7rem',
+                      ...(delivery.flagged === 'repair' || ['Repair on site', 'Schedule'].includes(delivery.status) ? { background: '#fef2f2', borderLeft: '3px solid #c53030' } : {})
+                    }}
                   >
                     <div style={{ fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{delivery.clientName}</span>
                       <div style={{ display: 'flex', gap: 2 }}>
                         {delivery.status === 'Delivered' && <span title="Delivered" style={{ fontSize: 10 }}>✅</span>}
                         {delivery.status === 'In Progress' && <span title="In Progress" style={{ fontSize: 10 }}>🚛</span>}
-                        {delivery.flagged && <span title={delivery.flagged} style={{ fontSize: 10 }}>🔄</span>}
+                        {delivery.flagged && <span title={delivery.flagged} style={{ fontSize: 10 }}>{delivery.flagged === 'repair' ? '🔧' : '🔄'}</span>}
                         {delivery.orderSource === 'online' && <span title="Online Order" style={{ fontSize: 10 }}>🌐</span>}
                       </div>
                     </div>

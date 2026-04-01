@@ -125,15 +125,15 @@ export default function WeeklyCalendar({ deliveries, repairEvents = [], currentD
                       key={'r-' + ev.id}
                       className="delivery-card"
                       onClick={e => { e.stopPropagation(); onSwitchTab('repairs'); }}
-                      style={{ borderLeftColor: '#7c3aed', background: '#f5f3ff', cursor: 'pointer' }}
-                      title="Repair return"
+                      style={{ borderLeftColor: '#c53030', background: '#fef2f2', cursor: 'pointer' }}
+                      title="Repair Appointment"
                     >
-                      <div className="delivery-time" style={{ color: '#7c3aed' }}>
+                      <div className="delivery-time" style={{ color: '#c53030' }}>
                         🔧 {ev.returnTimeWindow?.split(' - ')[0]}
                       </div>
                       <div className="delivery-client">{ev.clientName}</div>
-                      <div className="delivery-meta" style={{ color: '#7c3aed' }}>
-                        <span>Return</span>
+                      <div className="delivery-meta" style={{ color: '#c53030' }}>
+                        <span>Repair</span>
                         {ev.status === 'Ready for Return' && <span style={{ fontWeight: 700 }}>✅ Ready</span>}
                       </div>
                     </div>
@@ -142,7 +142,10 @@ export default function WeeklyCalendar({ deliveries, repairEvents = [], currentD
                       key={ev.id}
                       className={`delivery-card status-${(ev.status || 'scheduled').toLowerCase().replace(/\s/g,'-')}`}
                       onClick={(e) => { e.stopPropagation(); onEditDelivery(ev); }}
-                      style={{ borderLeftColor: getStatusColor(ev.status) }}
+                      style={{ 
+                        borderLeftColor: (ev.flagged === 'repair' || ['Repair on site', 'Schedule'].includes(ev.status)) ? '#c53030' : getStatusColor(ev.status), 
+                        background: (ev.flagged === 'repair' || ['Repair on site', 'Schedule'].includes(ev.status)) ? '#fef2f2' : undefined 
+                      }}
                       title="Click to edit"
                     >
                       <div className="delivery-time">{ev.timeWindow?.split(' - ')[0] || ev.timeWindow}</div>
@@ -161,10 +164,13 @@ export default function WeeklyCalendar({ deliveries, repairEvents = [], currentD
                         {ev.flagged && (
                           <span style={{ 
                             fontSize: 10, fontWeight: 700, padding: '2px 6px', 
-                            borderRadius: 4, background: '#fee2e2', color: '#c53030', border: '1px solid #fecaca',
+                            borderRadius: 4, 
+                            background: ev.flagged === 'repair' ? '#fef2f2' : '#f5f3ff', 
+                            color: ev.flagged === 'repair' ? '#c53030' : '#7c3aed', 
+                            border: `1px solid ${ev.flagged === 'repair' ? '#fca5a5' : '#c4b5fd'}`,
                             textTransform: 'uppercase'
                           }}>
-                            🔄 {ev.flagged}
+                            {ev.flagged === 'repair' ? '🔧 ' : '🔄 '}{ev.flagged}
                           </span>
                         )}
                         {ev.orderSource === 'online' && (
@@ -200,7 +206,7 @@ export default function WeeklyCalendar({ deliveries, repairEvents = [], currentD
                       <div className="delivery-meta">
                         {ev.deliveryTeam && <span>👥 {ev.deliveryTeam}</span>}
                         {ev.orderSource === 'online' && <span className="online-badge">WEB</span>}
-                        {ev.flagged && <span className="flag-badge">{ev.flagged === 'return' ? '🔴' : ev.flagged === 'exchange' ? '🟡' : '🟣'}</span>}
+                        {ev.flagged && <span className="flag-badge">{ev.flagged === 'repair' ? '🔧' : ev.flagged === 'return' ? '🔴' : ev.flagged === 'exchange' ? '🟡' : '🟣'}</span>}
                       </div>
                       {ev.notes && (
                         <div style={{ marginTop: '0.25rem', fontSize: '0.68rem', color: 'var(--primary)', fontWeight: 600 }}>📝 notes</div>

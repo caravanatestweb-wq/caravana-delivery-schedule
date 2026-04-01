@@ -4,8 +4,8 @@ const STAT_CARDS = [
   { key: 'active',   label: 'ACTIVE',      color: '#0b7a4a', bg: '#eef7f0', border: '#a7f0d4' },
   { key: 'today',    label: 'TODAY',       color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
   { key: 'followups',label: 'FOLLOW-UPS',  color: '#c89b0a', bg: '#fef9ee', border: '#fde68a' },
-  { key: 'returns',  label: 'RETURNS',     color: '#c53030', bg: '#fef2f2', border: '#fca5a5' },
-  { key: 'repairs',  label: 'REPAIRS',     color: '#7c3aed', bg: '#f5f3ff', border: '#c4b5fd' },
+  { key: 'returns',  label: 'RETURNS',     color: '#7c3aed', bg: '#f5f3ff', border: '#c4b5fd' },
+  { key: 'repairs',  label: 'REPAIRS',     color: '#c53030', bg: '#fef2f2', border: '#fca5a5' },
 ];
 
 export default function StatsBar({ deliveries, repairs = [], followupCount, returnsCount, activeTab, onTabClick }) {

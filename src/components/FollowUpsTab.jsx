@@ -25,7 +25,7 @@ const RECEIPT_MSG = (firstName, items = [], orderNumber = '') =>
 const PREP_MSG = (firstName, date, shareUrl) =>
   `Hi ${firstName}, We're so excited for your delivery — it's almost time! Your new furniture is scheduled to arrive on ${fmtDate(date)}. We want to make sure the experience is smooth and enjoyable.\n\nView Your Visual Delivery Guide & Preparation Tips here:\n${shareUrl}\n\nSee you soon! — The Caravana Family`;
 
-export default function FollowUpsTab({ deliveries, updateDelivery }) {
+export default function FollowUpsTab({ deliveries, updateDelivery, onEditDelivery }) {
   const today = localDate();
   const [sending, setSending] = useState(null);
   const [sendStatus, setSendStatus] = useState({});
@@ -66,13 +66,13 @@ export default function FollowUpsTab({ deliveries, updateDelivery }) {
     type === 'day3' ? { day3Sent: true } :
     { reviewRequested: true };
 
-  const handleSend = async (delivery, type, message, useSMS = true) => {
+  const handleSend = async (delivery, type, message, useSMS = true, isDismiss = false) => {
     const key = delivery.id + type;
     setSending(key);
     setSendStatus(p => ({ ...p, [key]: null }));
 
     try {
-      if (useSMS) {
+      if (useSMS && !isDismiss) {
         if (!delivery.phone) throw new Error('No phone number on this delivery');
         await sendTextMagicSMS(delivery.phone, message);
       }
@@ -82,10 +82,10 @@ export default function FollowUpsTab({ deliveries, updateDelivery }) {
       const { error } = await supabase.from('deliveries').update(updates).eq('id', delivery.id);
       if (!error) {
         updateDelivery(delivery.id, updates);
-        setSendStatus(p => ({ ...p, [key]: 'sent' }));
+        setSendStatus(p => ({ ...p, [key]: isDismiss ? 'dismissed' : 'sent' }));
       }
 
-      if (!useSMS) {
+      if (!useSMS && !isDismiss) {
         navigator.clipboard?.writeText(message);
         setSendStatus(p => ({ ...p, [key]: 'copied' }));
       }
@@ -137,9 +137,9 @@ export default function FollowUpsTab({ deliveries, updateDelivery }) {
                 padding: '16px 18px', marginBottom: 14,
                 boxShadow: 'var(--shadow-sm)',
               }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8, cursor: 'pointer' }} onClick={() => onEditDelivery && onEditDelivery(d, [...upcomingPrepItems, ...followupItems.map(f=>f.delivery), ...reviewedItems])}>
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text-main)' }}>{d.clientName}</div>
+                    <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text-main)', textDecoration: 'underline' }}>{d.clientName}</div>
                     <div style={{ fontSize: 12, color: 'var(--text-light)' }}>
                       Scheduled {fmtDate(d.date)} · {days === 0 ? 'Today' : `In ${days} day${days > 1 ? 's' : ''}`}
                       {d.phone && <span style={{ marginLeft: 8 }}>📞 {d.phone}</span>}
@@ -168,6 +168,7 @@ export default function FollowUpsTab({ deliveries, updateDelivery }) {
                   }}>
                     {status === 'sent' ? '✅ Prep Guide sent & marked!' :
                      status === 'copied' ? '📋 Guide Link copied to clipboard!' :
+                     status === 'dismissed' ? '🗑️ Follow-up dismissed!' :
                      `❌ ${status.replace('error:', '')}`}
                   </div>
                 )}
@@ -184,6 +185,10 @@ export default function FollowUpsTab({ deliveries, updateDelivery }) {
                   <a href={`sms:${d.phone}?body=${encodeURIComponent(message)}`} className="btn-secondary" style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13, textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center' }}>
                     💬 SMS App
                   </a>
+                  <button className="btn-secondary" style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13, color: '#c53030', borderColor: '#fca5a5' }}
+                    onClick={(e) => { e.stopPropagation(); if(window.confirm('Dismiss this task without sending?')) handleSend(d, 'prep', message, false, true); }}>
+                    🗑️ Dismiss
+                  </button>
                 </div>
               </div>
             );
@@ -217,9 +222,9 @@ export default function FollowUpsTab({ deliveries, updateDelivery }) {
             padding: '16px 18px', marginBottom: 14,
             boxShadow: 'var(--shadow-sm)',
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8, cursor: 'pointer' }} onClick={() => onEditDelivery && onEditDelivery(d, [...upcomingPrepItems, ...followupItems.map(f=>f.delivery), ...reviewedItems])}>
               <div>
-                <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text-main)' }}>{d.clientName}</div>
+                <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text-main)', textDecoration: 'underline' }}>{d.clientName}</div>
                 <div style={{ fontSize: 12, color: 'var(--text-light)' }}>
                   Delivered {fmtDate(d.date)} · Day {days}
                   {d.phone && <span style={{ marginLeft: 8 }}>📞 {d.phone}</span>}
@@ -249,6 +254,7 @@ export default function FollowUpsTab({ deliveries, updateDelivery }) {
               }}>
                 {status === 'sent' ? '✅ SMS sent & marked!' :
                  status === 'copied' ? '📋 Message copied to clipboard!' :
+                 status === 'dismissed' ? '🗑️ Follow-up dismissed!' :
                  `❌ ${status.replace('error:', '')}`}
               </div>
             )}
@@ -291,6 +297,14 @@ export default function FollowUpsTab({ deliveries, updateDelivery }) {
                   ✉️ Email
                 </a>
               )}
+
+              {/* Dismiss */}
+              <button
+                style={{ fontSize: 13, padding: '8px 16px', borderRadius: 8, border: '1px solid #fca5a5', background: 'var(--surface)', color: '#c53030', cursor: 'pointer', fontFamily: 'inherit' }}
+                onClick={(e) => { e.stopPropagation(); if(window.confirm('Dismiss this task without sending?')) handleSend(d, type, message, false, true); }}
+              >
+                🗑️ Dismiss
+              </button>
             </div>
           </div>
         );
@@ -303,8 +317,8 @@ export default function FollowUpsTab({ deliveries, updateDelivery }) {
             ✅ Reviews Requested ({reviewedItems.length})
           </h4>
           {reviewedItems.slice(0, 10).map(d => (
-            <div key={d.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 14px', background: 'var(--surface)', borderRadius: 8, marginBottom: 6, fontSize: 13, color: 'var(--text-light)', border: '1px solid var(--border)' }}>
-              <span>{d.clientName}</span>
+            <div key={d.id} className="active-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 14px', background: 'var(--surface)', borderRadius: 8, marginBottom: 6, fontSize: 13, color: 'var(--text-light)', border: '1px solid var(--border)', cursor: 'pointer' }} onClick={() => onEditDelivery && onEditDelivery(d, [...upcomingPrepItems, ...followupItems.map(f=>f.delivery), ...reviewedItems])}>
+              <span style={{ textDecoration: 'underline' }}>{d.clientName}</span>
               <span>{fmtDate(d.date)}</span>
             </div>
           ))}
