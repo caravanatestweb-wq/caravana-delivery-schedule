@@ -1,5 +1,5 @@
 /* VERSION: 1.0.9-DUAL-LIST */
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import WeeklyCalendar from './components/WeeklyCalendar';
 import MonthlyCalendar from './components/MonthlyCalendar';
 import DailyCalendar from './components/DailyCalendar';
@@ -189,87 +189,110 @@ function App() {
     }
   }, [viewRole, activeTab, viewMode, currentDate, showArchive, publicPreviewId]);
 
-  // 1. Initial Load from Supabase
-  useEffect(() => {
-    const fetchDeliveries = async () => {
-      setIsLoading(true);
-      const { data, error } = await supabase
-        .from('deliveries')
-        .select('*');
-      
-      if (error) {
-        console.error('Error fetching deliveries:', error);
-      } else {
-        // 🔍 Aggressive Migration Logic
-        const localSaved = localStorage.getItem('furniture_deliveries');
-        const isMigrated = localStorage.getItem('supabase_migrated');
+  const loadRepairs = useCallback(async () => {
+    const { data } = await supabase.from('repairs').select('*');
+    if (data) setRepairs(data);
+  }, []);
 
-        if (localSaved && !isMigrated) {
-          try {
-            const localData = JSON.parse(localSaved);
-            if (localData.length > 0) {
-              console.log('Merging local data to Supabase...');
-              const transformed = localData.map(d => ({
-                id: (d.id && d.id.toString().length > 20) ? d.id : crypto.randomUUID(),
-                date: d.date,
-                timeWindow: d.timeWindow,
-                source: d.source || 'Caravana store',
-                scheduledBy: d.scheduledBy || '',
-                clientName: d.clientName || '',
-                address: d.address || '',
-                phone: d.phone || '',
-                status: d.status || 'Scheduled',
-                notes: d.notes || '',
-                packingList: d.packingList || []
-              }));
-              
-              const { error: insErr } = await supabase.from('deliveries').insert(transformed);
-              
-              if (!insErr) {
-                localStorage.setItem('supabase_migrated', 'true');
-                console.log('Migration successful!');
-                return fetchDeliveries();
-              } else {
-                console.error('Migration error:', insErr);
-              }
-            } else {
+  const loadPickups = useCallback(async () => {
+    const { data } = await supabase.from('vendor_pickups').select('*');
+    if (data) setPickups(data);
+  }, []);
+
+  const loadTeam = useCallback(async () => {
+    const { data } = await supabase.from('team_members').select('name').order('name');
+    if (data) setTeamMembers(data.map(m => m.name));
+  }, []);
+
+  const loadAlerts = useCallback(async () => {
+    const now = new Date().toISOString();
+    const { data } = await supabase.from('team_alerts').select('*').gt('expires_at', now);
+    if (data) setTeamAlerts(data);
+  }, []);
+
+  const fetchDeliveries = useCallback(async () => {
+    setIsLoading(true);
+    const { data, error } = await supabase
+      .from('deliveries')
+      .select('*');
+    
+    if (error) {
+      console.error('Error fetching deliveries:', error);
+    } else {
+      // 🔍 Aggressive Migration Logic
+      const localSaved = localStorage.getItem('furniture_deliveries');
+      const isMigrated = localStorage.getItem('supabase_migrated');
+
+      if (localSaved && !isMigrated) {
+        try {
+          const localData = JSON.parse(localSaved);
+          if (localData.length > 0) {
+            console.log('Merging local data to Supabase...');
+            const transformed = localData.map(d => ({
+              id: (d.id && d.id.toString().length > 20) ? d.id : crypto.randomUUID(),
+              date: d.date,
+              timeWindow: d.timeWindow,
+              source: d.source || 'Caravana store',
+              scheduledBy: d.scheduledBy || '',
+              clientName: d.clientName || '',
+              address: d.address || '',
+              phone: d.phone || '',
+              status: d.status || 'Scheduled',
+              notes: d.notes || '',
+              packingList: d.packingList || []
+            }));
+            
+            const { error: insErr } = await supabase.from('deliveries').insert(transformed);
+            
+            if (!insErr) {
               localStorage.setItem('supabase_migrated', 'true');
+              console.log('Migration successful!');
+              return fetchDeliveries();
+            } else {
+              console.error('Migration error:', insErr);
             }
-          } catch (e) { 
-            console.error('Migration parsing error:', e);
+          } else {
             localStorage.setItem('supabase_migrated', 'true');
           }
+        } catch (e) { 
+          console.error('Migration parsing error:', e);
+          localStorage.setItem('supabase_migrated', 'true');
         }
-        
-        setDeliveries(data || []);
       }
-      setIsLoading(false);
+      setDeliveries(data || []);
+    }
+    setIsLoading(false);
+  }, []);
+
+  // 1A. Visibility Re-sync (Prevents silent drops/throttling)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('Tab visible: Re-syncing deliveries...');
+        fetchDeliveries();
+      }
     };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [fetchDeliveries]);
+
+  const loadSettings = useCallback(async () => {
+    const { data } = await supabase.from('app_settings').select('*').eq('id', 1).single();
+    if (data) {
+      if (data.tm_user) localStorage.setItem('tm_username', data.tm_user);
+      if (data.tm_key) localStorage.setItem('tm_apikey', data.tm_key);
+    }
+  }, []);
+
+  // 1. Initial Load from Supabase
+  useEffect(() => {
+    loadSettings();
     fetchDeliveries();
-
-    // Also load repairs and team members
-    const loadRepairs = async () => {
-      const { data } = await supabase.from('repairs').select('*');
-      if (data) setRepairs(data);
-    };
-    const loadPickups = async () => {
-      const { data } = await supabase.from('vendor_pickups').select('*');
-      if (data) setPickups(data);
-    };
-    const loadTeam = async () => {
-      const { data } = await supabase.from('team_members').select('name').order('name');
-      if (data) setTeamMembers(data.map(m => m.name));
-    };
-    const loadAlerts = async () => {
-      const now = new Date().toISOString();
-      const { data } = await supabase.from('team_alerts').select('*').gt('expires_at', now);
-      if (data) setTeamAlerts(data);
-    };
-
     loadRepairs();
     loadTeam();
     loadAlerts();
     loadPickups();
+
 
     // 2. Real-time Subscription
     const channel = supabase
@@ -348,6 +371,18 @@ function App() {
     else { setRepairs(prev => prev.filter(r => r.id !== id)); handleCloseRepairModal(); }
   };
 
+  const handleUpdateRepairStatus = async (id, status) => {
+    const { error } = await supabase.from('repairs').update({ status }).eq('id', id);
+    if (error) alert('Error updating repair status: ' + error.message);
+    else setRepairs(prev => prev.map(r => r.id === id ? { ...r, status } : r));
+  };
+
+  const handleResolveRepair = async (id) => {
+    const { error } = await supabase.from('repairs').update({ isResolved: true }).eq('id', id);
+    if (error) alert('Error resolving repair: ' + error.message);
+    else setRepairs(prev => prev.map(r => r.id === id ? { ...r, isResolved: true } : r));
+  };
+
   // Pickup handlers
   const handleOpenNewPickup = () => { setEditingPickup(null); setIsPickupModalOpen(true); };
   const handleEditPickup = (p) => { setEditingPickup(p); setIsPickupModalOpen(true); };
@@ -359,7 +394,7 @@ function App() {
     else setPickups(prev => prev.filter(p => p.id !== id));
     setIsPickupModalOpen(false);
   };
-  const handleSavePickup = async (formData) => {
+  const handleSavePickup = async (formData, keepOpen = false) => {
     let err;
     if (formData.id) { 
       const { error } = await supabase.from('vendor_pickups').update(formData).eq('id', formData.id); 
@@ -378,9 +413,17 @@ function App() {
     if (err) {
       alert("Error saving pickup: " + err.message + "\n\nDetails: " + JSON.stringify(err.details));
       console.error(err);
+      return false;
     } else {
-      setIsPickupModalOpen(false);
+      if (!keepOpen) setIsPickupModalOpen(false);
+      return true;
     }
+  };
+
+  const handleUpdatePickupStatus = async (id, status) => {
+    const { error } = await supabase.from('vendor_pickups').update({ status }).eq('id', id);
+    if (error) alert('Error updating pickup status: ' + error.message);
+    else setPickups(prev => prev.map(p => p.id === id ? { ...p, status } : p));
   };
 
   const handleSaveDelivery = async (deliveryData) => {
@@ -579,7 +622,15 @@ function App() {
         {showSettings && <TeamSettings onClose={() => setShowSettings(false)} />}
 
         {viewRole === 'team' && (
-          <TeamView deliveries={liveDeliveries} repairs={repairs} pickups={pickups.filter(p => p.status !== 'Canceled')} updateDelivery={updateDelivery} onEditRepair={handleEditRepair} />
+          <TeamView 
+            deliveries={liveDeliveries} 
+            repairs={repairs} 
+            pickups={pickups.filter(p => p.status !== 'Canceled')} 
+            updateDelivery={updateDelivery} 
+            onEditRepair={handleEditRepair} 
+            onUpdateRepairStatus={handleUpdateRepairStatus}
+            onUpdatePickupStatus={handleUpdatePickupStatus}
+          />
         )}
 
         {/* ── OFFICE MODE ── */}
@@ -659,9 +710,9 @@ function App() {
                   </button>
                   <button className={`office-tab ${activeTab === 'repairs' ? 'active' : ''}`} onClick={() => setActiveTab('repairs')}>
                     🔧 Repairs
-                    {repairs.filter(r => r.status !== 'Returned').length > 0 && (
+                    {repairs.filter(r => r.status !== 'Returned' && r.isResolved !== true).length > 0 && (
                       <span className="office-tab-badge" style={{ background: '#c53030' }}>
-                        {repairs.filter(r => r.status !== 'Returned').length}
+                        {repairs.filter(r => r.status !== 'Returned' && r.isResolved !== true).length}
                       </span>
                     )}
                   </button>
@@ -709,7 +760,7 @@ function App() {
                 {activeTab === 'active' && (() => {
                   const combinedActive = [
                     ...liveDeliveries.filter(d => !['Delivered', 'Completed'].includes(d.status)),
-                    ...repairs.filter(r => !['Returned'].includes(r.status)).map(r => ({
+                    ...repairs.filter(r => !['Returned'].includes(r.status) && r.isResolved !== true).map(r => ({
                       ...r, _type: 'repair', id: 'r-' + r.id, originalRepair: r,
                       date: r.returnDate || '9999-12-31', timeWindow: r.appointmentType || ''
                     })),
@@ -768,6 +819,7 @@ function App() {
                     repairs={repairs}
                     onNew={handleOpenNewRepair}
                     onEdit={handleEditRepair}
+                    onResolve={handleResolveRepair}
                   />
                 )}
               </>
