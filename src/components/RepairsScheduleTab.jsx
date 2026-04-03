@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { supabase } from '../lib/supabaseClient';
 
 const STATUS_CONFIG = {
   'Schedule':        { color: '#8b5cf6', bg: '#f5f3ff', icon: '📝' },
@@ -20,11 +21,11 @@ const daysDiff = (from, to) => {
   return Math.round((new Date(to + 'T12:00:00') - new Date(from + 'T12:00:00')) / 86400000);
 };
 
-export default function RepairsScheduleTab({ repairs, onNew, onEdit }) {
+export default function RepairsScheduleTab({ repairs, onNew, onEdit, onResolve }) {
   const [filterStatus, setFilterStatus] = useState('all');
 
   const filtered = repairs
-    .filter(r => filterStatus === 'all' || r.status === filterStatus)
+    .filter(r => (filterStatus === 'all' || r.status === filterStatus) && r.isResolved !== true)
     .sort((a, b) => {
       // Sort active repairs by return date, completed ones at bottom
       if (a.status === 'Returned' && b.status !== 'Returned') return 1;
@@ -144,25 +145,38 @@ export default function RepairsScheduleTab({ repairs, onNew, onEdit }) {
                     </div>
                   </div>
 
-                  {/* Return date badge */}
-                  {r.returnDate && (
-                    <div style={{
-                      textAlign: 'center', minWidth: 90, padding: '10px 14px',
-                      background: isOverdue ? '#fef2f2' : '#fef2f2',
-                      border: `1.5px solid ${isOverdue ? '#991b1b' : '#fca5a5'}`,
-                      borderRadius: 10, flexShrink: 0,
-                    }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: isOverdue ? '#c53030' : '#c53030', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        {isOverdue ? '⚠️ Overdue' : daysUntilReturn === 0 ? '📅 Today' : daysUntilReturn === 1 ? '📅 Tomorrow' : `📅 ${daysUntilReturn}d`}
+                  {/* Return date badge & Actions */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {r.returnDate && (
+                      <div style={{
+                        textAlign: 'center', minWidth: 90, padding: '10px 14px',
+                        background: isOverdue ? '#fef2f2' : '#fef2f2',
+                        border: `1.5px solid ${isOverdue ? '#991b1b' : '#fca5a5'}`,
+                        borderRadius: 10, flexShrink: 0,
+                      }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: isOverdue ? '#c53030' : '#c53030', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          {isOverdue ? '⚠️ Overdue' : daysUntilReturn === 0 ? '📅 Today' : daysUntilReturn === 1 ? '📅 Tomorrow' : `📅 ${daysUntilReturn}d`}
+                        </div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-main)', marginTop: 2 }}>
+                          {fmtDate(r.returnDate)}
+                        </div>
+                        <div style={{ fontSize: 10, color: 'var(--text-light)', marginTop: 1 }}>
+                          {r.returnTimeWindow?.split(' - ')[0]}
+                        </div>
                       </div>
-                      <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-main)', marginTop: 2 }}>
-                        {fmtDate(r.returnDate)}
-                      </div>
-                      <div style={{ fontSize: 10, color: 'var(--text-light)', marginTop: 1 }}>
-                        {r.returnTimeWindow?.split(' - ')[0]}
-                      </div>
-                    </div>
-                  )}
+                    )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onResolve) {
+                          onResolve(r.id);
+                        }
+                      }}
+                      style={{ padding: '8px 12px', background: '#eef7f0', color: '#0b7a4a', border: '1.5px solid #0b7a4a', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', textAlign: 'center' }}
+                    >
+                      ✅ Resolved
+                    </button>
+                  </div>
                 </div>
               </div>
             );

@@ -4,7 +4,7 @@ import TeamCalendarCarousel from './TeamCalendarCarousel';
 import { supabase } from '../lib/supabaseClient';
 import { localDate, fmtDate, sortDeliveriesByTime } from '../lib/constants';
 
-export default function TeamView({ deliveries, repairs = [], pickups = [], updateDelivery, onEditRepair }) {
+export default function TeamView({ deliveries, repairs = [], pickups = [], updateDelivery, onEditRepair, onUpdateRepairStatus, onUpdatePickupStatus }) {
   const [activeId, setActiveId] = useState(null);
   const [viewMode, setViewMode] = useState('list');
   const [filterTab, setFilterTab] = useState('active'); // active, today, returns, repairs, past
@@ -237,7 +237,7 @@ export default function TeamView({ deliveries, repairs = [], pickups = [], updat
                           </span>
                         </div>
                         {todayByTeam[teamName].map((d, i) => (
-                            <StopCard key={d.id} delivery={d} stopNum={i + 1} onSelect={() => d._type === 'repair' ? onEditRepair && onEditRepair(d.originalRepair) : (d._type === 'pickup' ? alert("Warehouse Pickups are managed via Command Center") : setActiveId(d.id))} showDate={false} />
+                            <StopCard key={d.id} delivery={d} stopNum={i + 1} onSelect={() => d._type === 'repair' ? onEditRepair && onEditRepair(d.originalRepair) : (d._type === 'pickup' ? alert("Warehouse Pickups are managed via Command Center") : setActiveId(d.id))} showDate={false} onUpdateRepairStatus={onUpdateRepairStatus} onUpdatePickupStatus={onUpdatePickupStatus} />
                         ))}
                       </div>
                     ))}
@@ -245,7 +245,7 @@ export default function TeamView({ deliveries, repairs = [], pickups = [], updat
                 ) : (
                   <div>
                     {todayStops.map((d, i) => (
-                        <StopCard key={d.id} delivery={d} stopNum={i + 1} onSelect={() => d._type === 'repair' ? onEditRepair && onEditRepair(d.originalRepair) : (d._type === 'pickup' ? alert("Warehouse Pickups are managed via Command Center") : setActiveId(d.id))} showDate={false} />
+                        <StopCard key={d.id} delivery={d} stopNum={i + 1} onSelect={() => d._type === 'repair' ? onEditRepair && onEditRepair(d.originalRepair) : (d._type === 'pickup' ? alert("Warehouse Pickups are managed via Command Center") : setActiveId(d.id))} showDate={false} onUpdateRepairStatus={onUpdateRepairStatus} onUpdatePickupStatus={onUpdatePickupStatus} />
                     ))}
                   </div>
                 )}
@@ -260,7 +260,7 @@ export default function TeamView({ deliveries, repairs = [], pickups = [], updat
                 📋 {fmtHeader(dateKey)}
               </h3>
               {otherByDate[dateKey].map((d, i) => (
-                <StopCard key={d.id} delivery={d} stopNum={i + 1} onSelect={() => d._type === 'repair' ? onEditRepair && onEditRepair(d.originalRepair) : setActiveId(d.id)} />
+                <StopCard key={d.id} delivery={d} stopNum={i + 1} onSelect={() => d._type === 'repair' ? onEditRepair && onEditRepair(d.originalRepair) : setActiveId(d.id)} onUpdateRepairStatus={onUpdateRepairStatus} onUpdatePickupStatus={onUpdatePickupStatus} />
               ))}
             </div>
           ))}
@@ -270,58 +270,87 @@ export default function TeamView({ deliveries, repairs = [], pickups = [], updat
   );
 }
 
-function StopCard({ delivery: d, stopNum, onSelect, showDate }) {
+function StopCard({ delivery: d, stopNum, onSelect, showDate, onUpdateRepairStatus, onUpdatePickupStatus }) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const isRepair = d._type === 'repair' || d.flagged === 'repair' || ['Repair on site', 'Schedule'].includes(d.status);
   const isPickup = d._type === 'pickup';
 
+  const handleQuickComplete = (e) => {
+    e.stopPropagation();
+    const newStatus = d.status === 'Completed' ? 'Scheduled' : 'Completed';
+    if (isPickup && onUpdatePickupStatus) onUpdatePickupStatus(d.originalPickup.id, newStatus);
+    if (d._type === 'repair' && onUpdateRepairStatus) onUpdateRepairStatus(d.originalRepair.id, newStatus);
+  };
+
   if (isPickup) {
     return (
-      <button onClick={onSelect} style={{ width: '100%', textAlign: 'left', background: '#eff6ff', border: '1px solid #bfdbfe', borderLeftWidth: 6, borderLeftColor: '#2563eb', borderRadius: 14, padding: '16px 18px', marginBottom: 10, boxShadow: 'var(--shadow-sm)', cursor: 'pointer' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-          <span style={{ fontSize: 12, fontWeight: 800, color: '#1e3a8a', textTransform: 'uppercase', letterSpacing: 0.5 }}>🏭 Vendor Pickup</span>
-          <span style={{ padding: '3px 10px', borderRadius: 10, fontSize: 11, fontWeight: 800, background: '#2563eb', color: '#fff', letterSpacing: 0.5 }}>PICKUP</span>
+      <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderLeftWidth: 6, borderLeftColor: '#2563eb', borderRadius: 12, padding: '14px 16px', marginBottom: 10, boxShadow: 'var(--shadow-sm)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div onClick={() => setIsExpanded(!isExpanded)} style={{ cursor: 'pointer', flex: 1, paddingRight: 10 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: '#1e3a8a', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
+              [#{stopNum}] 🏭 Warehouse Pickup
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#1e3a8a', marginBottom: 2 }}>{d.clientName.replace('🏭 ', '')}</div>
+            <div style={{ fontSize: 13, color: '#3b82f6', marginBottom: 6 }}>{d.address}</div>
+            <div style={{ display: 'flex', gap: 12, fontSize: 12, color: '#1e3a8a', flexWrap: 'wrap' }}>
+              {showDate && d.date && <span>📅 {fmtDate(d.date)}</span>}
+              {d.timeWindow && <span>🕐 {d.timeWindow}</span>}
+              {isExpanded ? '🔽 hide' : '▶️ details'}
+            </div>
+          </div>
+          <div onClick={handleQuickComplete} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', flexShrink: 0 }}>
+            <div style={{ width: 32, height: 32, border: '2px solid #2563eb', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', background: d.status === 'Completed' ? '#2563eb' : '#fff' }}>
+              {d.status === 'Completed' && <span style={{ color: '#fff', fontSize: 18, lineHeight: 1 }}>✓</span>}
+            </div>
+            <span style={{ fontSize: 10, fontWeight: 700, color: '#2563eb', marginTop: 4 }}>DONE</span>
+          </div>
         </div>
-        <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-main)', marginBottom: 4 }}>{d.clientName}</div>
-        <div style={{ fontSize: 13, color: 'var(--text-light)', marginBottom: 10 }}>{d.address}</div>
-        <div style={{ display: 'flex', gap: 14, fontSize: 13, color: 'var(--text-light)', flexWrap: 'wrap' }}>
-          {showDate && d.date && <span>📅 {fmtDate(d.date)}</span>}
-          {d.timeWindow && <span>🕐 {d.timeWindow}</span>}
-          <span>{d.status}</span>
-        </div>
-      </button>
+        
+        {isExpanded && (
+          <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #bfdbfe', fontSize: 13, color: '#1e3a8a' }}>
+             {d.originalPickup?.warehouse_name && <div style={{ marginBottom: 4 }}><strong>Warehouse ID:</strong> {d.originalPickup.warehouse_name}</div>}
+             {d.originalPickup?.order_number && <div style={{ marginBottom: 4 }}><strong>Order #:</strong> {d.originalPickup.order_number}</div>}
+             {d.originalPickup?.items_list && <div style={{ marginBottom: 4 }}><strong>Items:</strong> {d.originalPickup.items_list}</div>}
+             <div style={{ marginBottom: 4 }}><strong>Notes:</strong> {d.originalPickup?.notes || 'No notes provided.'}</div>
+             <button onClick={onSelect} style={{ marginTop: 8, padding: '8px 16px', background: '#dbeafe', color: '#1e3a8a', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>📝 Open Editor via Command Center</button>
+          </div>
+        )}
+      </div>
     );
   }
   
   if (isRepair) {
     return (
-      <button
-        onClick={onSelect}
-        style={{
-          width: '100%', textAlign: 'left',
-          background: '#fef2f2',
-          border: '1px solid #fca5a5',
-          borderLeftWidth: 6,
-          borderLeftColor: '#c53030',
-          borderRadius: 14, padding: '16px 18px', marginBottom: 10,
-          boxShadow: 'var(--shadow-sm)', cursor: 'pointer',
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-          <span style={{ fontSize: 12, fontWeight: 800, color: '#c53030', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-            🔧 Repair Routing
-          </span>
-          <span style={{ padding: '3px 10px', borderRadius: 10, fontSize: 11, fontWeight: 800, background: '#c53030', color: '#fff', letterSpacing: 0.5 }}>
-            REPAIR
-          </span>
+      <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderLeftWidth: 6, borderLeftColor: '#c53030', borderRadius: 12, padding: '14px 16px', marginBottom: 10, boxShadow: 'var(--shadow-sm)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div onClick={() => setIsExpanded(!isExpanded)} style={{ cursor: 'pointer', flex: 1, paddingRight: 10 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: '#c53030', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
+              [#{stopNum}] 🔧 Repair Routing
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#c53030', marginBottom: 2 }}>{d.clientName}</div>
+            <div style={{ fontSize: 13, color: '#ef4444', marginBottom: 6 }}>{d.address}</div>
+            <div style={{ display: 'flex', gap: 12, fontSize: 12, color: '#c53030', flexWrap: 'wrap' }}>
+              {showDate && d.date && <span>📅 {fmtDate(d.date)}</span>}
+              {d.timeWindow && <span>🕐 {d.timeWindow}</span>}
+              {isExpanded ? '🔽 hide' : '▶️ details'}
+            </div>
+          </div>
+          {d._type === 'repair' && (
+            <div onClick={handleQuickComplete} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', flexShrink: 0 }}>
+              <div style={{ width: 32, height: 32, border: '2px solid #c53030', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', background: d.status === 'Completed' ? '#c53030' : '#fff' }}>
+                {d.status === 'Completed' && <span style={{ color: '#fff', fontSize: 18, lineHeight: 1 }}>✓</span>}
+              </div>
+              <span style={{ fontSize: 10, fontWeight: 700, color: '#c53030', marginTop: 4 }}>DONE</span>
+            </div>
+          )}
         </div>
-        <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-main)', marginBottom: 4 }}>{d.clientName}</div>
-        <div style={{ fontSize: 13, color: 'var(--text-light)', marginBottom: 10 }}>{d.address}</div>
-        <div style={{ display: 'flex', gap: 14, fontSize: 13, color: 'var(--text-light)', flexWrap: 'wrap' }}>
-          {showDate && d.date && <span>📅 {fmtDate(d.date)}</span>}
-          {d.timeWindow && <span>🕐 {d.timeWindow}</span>}
-          {d.status === 'Ready for Return' && <span style={{ color: '#0b7a4a', fontWeight: 700 }}>✅ Ready</span>}
-        </div>
-      </button>
+        {isExpanded && (
+          <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #fca5a5', fontSize: 13, color: '#991b1b' }}>
+             {d.originalRepair?.notes && <div style={{ marginBottom: 4 }}><strong>Notes:</strong> {d.originalRepair.notes}</div>}
+             <button onClick={onSelect} style={{ marginTop: 8, padding: '8px 16px', background: '#fee2e2', color: '#991b1b', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>📝 Open Full Repair Form</button>
+          </div>
+        )}
+      </div>
     );
   }
 
@@ -339,14 +368,14 @@ function StopCard({ delivery: d, stopNum, onSelect, showDate }) {
         width: '100%', textAlign: 'left',
         background: 'var(--surface)',
         border: `2px solid ${isInProgress ? '#2563eb' : isReturn ? '#7c3aed' : 'var(--border)'}`,
-        borderRadius: 14, padding: '16px 18px', marginBottom: 10,
+        borderRadius: 14, padding: '14px 16px', marginBottom: 10,
         boxShadow: 'var(--shadow-sm)', cursor: 'pointer',
         transition: 'var(--transition)',
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-        <span style={{ fontSize: 12, fontWeight: 700, color: isReturn ? '#7c3aed' : '#0b7a4a', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-          {isReturn ? `🔄 ${d.flagged.charAt(0).toUpperCase() + d.flagged.slice(1)} Pickup` : `Stop #${stopNum}`}
+        <span style={{ fontSize: 11, fontWeight: 800, color: isReturn ? '#7c3aed' : '#0b7a4a', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+          [#{stopNum}] {isReturn ? `🔄 ${d.flagged} Pickup` : `Standard Delivery`}
         </span>
         {isInProgress && (
           <span style={{ padding: '3px 10px', borderRadius: 10, fontSize: 11, fontWeight: 700, background: '#eef0f7', color: '#2563eb' }}>
@@ -355,19 +384,15 @@ function StopCard({ delivery: d, stopNum, onSelect, showDate }) {
         )}
       </div>
 
-      <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-main)', marginBottom: 4 }}>{d.clientName}</div>
-      <div style={{ fontSize: 13, color: 'var(--text-light)', marginBottom: 10 }}>{d.address}</div>
+      <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-main)', marginBottom: 2 }}>{d.clientName}</div>
+      <div style={{ fontSize: 13, color: 'var(--text-light)', marginBottom: 8 }}>{d.address}</div>
 
-      <div style={{ display: 'flex', gap: 14, fontSize: 13, color: 'var(--text-light)', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 12, fontSize: 12, color: 'var(--text-light)', flexWrap: 'wrap' }}>
         {showDate && d.date && <span>📅 {fmtDate(d.date)}</span>}
         {d.timeWindow && <span>🕐 {d.timeWindow}</span>}
         <span>📦 {items.length} item{items.length !== 1 ? 's' : ''}</span>
         {d.deliveryTeam && <span>👥 {d.deliveryTeam}</span>}
-        {checkedCount > 0 && <span style={{ color: '#0b7a4a', fontWeight: 600 }}>✓ {checkedCount}/{items.length}</span>}
-        {d.source === 'Caravana Web' || d.orderSource === 'online'
-          ? <span style={{ padding: '2px 8px', borderRadius: 10, fontSize: 11, background: '#eef0f7', color: '#2563eb', fontWeight: 600 }}>ONLINE</span>
-          : null
-        }
+        {checkedCount > 0 && <span style={{ color: '#0b7a4a', fontWeight: 700 }}>✓ {checkedCount}/{items.length}</span>}
       </div>
     </button>
   );

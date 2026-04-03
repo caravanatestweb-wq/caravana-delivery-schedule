@@ -2,6 +2,9 @@ import React from 'react';
 import { fmtDate } from '../lib/constants';
 
 export default function ReceiptTemplate({ delivery }) {
+  // Helper to truncate long strings
+  const tr = (str, len) => (str && str.length > len ? str.slice(0, len) + '...' : str);
+
   // Extract info
   const dateStr = fmtDate(delivery.date) || '';
   const signDate = fmtDate(delivery.signDate) || dateStr;
@@ -39,16 +42,16 @@ export default function ReceiptTemplate({ delivery }) {
       <div className="receipt-meta-grid" style={{ fontSize: 15 }}>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: '#666', marginBottom: 6, letterSpacing: 0.5 }}>Client Information</div>
-          <div style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 6 }} className="pl-serif">{delivery.clientName}</div>
-          <div style={{ color: '#444', lineHeight: 1.5 }}>{delivery.address}</div>
-          <div style={{ color: '#444', marginTop: 4 }}>{delivery.phone}</div>
-          {delivery.email && <div style={{ color: '#444', marginTop: 4 }}>{delivery.email}</div>}
+          <div style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 6 }} className="pl-serif">{tr(delivery.clientName, 30)}</div>
+          <div style={{ color: '#444', lineHeight: 1.5 }}>{tr(delivery.address, 45)}</div>
+          <div style={{ color: '#444', marginTop: 4 }}>{tr(delivery.phone, 20)}</div>
+          {delivery.email && <div style={{ color: '#444', marginTop: 4 }}>{tr(delivery.email, 35)}</div>}
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: '#666', marginBottom: 6, letterSpacing: 0.5 }}>Fulfillment Details</div>
-          <div style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 6 }} className="pl-serif">{delivery.deliveryTeam || 'Team Unassigned'}</div>
-          <div style={{ marginTop: 4, color: '#444' }}><strong>Order Source:</strong> {delivery.source}</div>
-          <div style={{ marginTop: 4, color: '#444' }}><strong>Time Window:</strong> {delivery.timeWindow}</div>
+          <div style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 6 }} className="pl-serif">{tr(delivery.deliveryTeam, 30) || 'Team Unassigned'}</div>
+          <div style={{ marginTop: 4, color: '#444' }}><strong>Order Source:</strong> {tr(delivery.source, 20)}</div>
+          <div style={{ marginTop: 4, color: '#444' }}><strong>Time Window:</strong> {tr(delivery.timeWindow, 25)}</div>
         </div>
       </div>
 
@@ -81,8 +84,8 @@ export default function ReceiptTemplate({ delivery }) {
                   )}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 'bold', fontSize: 16, color: '#111', lineHeight: 1.4 }}>{item.description || 'Unnamed Item'}</div>
-                  <div style={{ fontSize: 13, color: '#555', marginTop: 6, fontWeight: 600 }}>SKU/Item: {item.itemNumber || 'N/A'}</div>
+                  <div style={{ fontWeight: 'bold', fontSize: 16, color: '#111', lineHeight: 1.4 }}>{tr(item.description, 40) || 'Unnamed Item'}</div>
+                  <div style={{ fontSize: 13, color: '#555', marginTop: 6, fontWeight: 600 }}>SKU/Item: {tr(item.itemNumber, 20) || 'N/A'}</div>
                 </div>
                 <div style={{ padding: '0 20px', textAlign: 'center' }}>
                   <div style={{ fontSize: 12, color: '#888', textTransform: 'uppercase', marginBottom: 4, fontWeight: 700 }}>Qty</div>
@@ -133,7 +136,7 @@ export default function ReceiptTemplate({ delivery }) {
         
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <div style={{ borderBottom: '2px solid #111', width: 450, height: 30, fontSize: 18, paddingLeft: 10, fontWeight: 'bold' }}>
-            {delivery.printName}
+            {tr(delivery.printName, 30)}
           </div>
           <span style={{ fontSize: 12, color: '#777', marginTop: 8, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700 }}>Printed Name</span>
         </div>
@@ -150,11 +153,15 @@ export default function ReceiptTemplate({ delivery }) {
           textDecoration: 'none', 
           fontWeight: 'bold',
           fontSize: 14,
-          marginBottom: 25,
+          marginBottom: 10,
           boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
         }}>
           💬 Questions or Feedback? Tap here to text us at (833) 242-4197
         </a>
+
+        <div style={{ marginBottom: 20, fontSize: 14, color: '#444' }}>
+          Love your new furniture? Visit <a href="https://www.caravanafurniture.com" style={{ color: '#0b7a4a', fontWeight: 'bold', textDecoration: 'none' }}>www.caravanafurniture.com</a> for our latest collections!
+        </div>
         
         <div style={{ fontSize: 10, letterSpacing: 1.5, color: '#888', textTransform: 'uppercase', borderTop: '1px solid #eee', paddingTop: 20 }}>
           CARAVANA FURNITURE  |  975 Central Blvd, Long Beach, CA 90813  |  562.432.0562

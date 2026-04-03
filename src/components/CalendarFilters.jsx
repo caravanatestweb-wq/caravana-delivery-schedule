@@ -11,7 +11,7 @@ const ALL_DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
 export const DEFAULT_FILTERS = {
   startHour: '08:00 AM',
-  endHour: '06:00 PM',
+  endHour: '08:00 PM',
   activeDays: ['Mon','Tue','Wed','Thu','Fri','Sat'] // exclude Sunday by default
 };
 

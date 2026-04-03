@@ -6,7 +6,7 @@ import './DailyCalendar.css';
 const TIME_SLOTS = [
   '08:00 AM','09:00 AM','10:00 AM','11:00 AM',
   '12:00 PM','01:00 PM','02:00 PM','03:00 PM',
-  '04:00 PM','05:00 PM','06:00 PM'
+  '04:00 PM','05:00 PM','06:00 PM','07:00 PM','08:00 PM'
 ];
 
 const SLOT_HEIGHT = 80;
@@ -15,6 +15,7 @@ const getTimeWindowIndices = (timeWindow) => {
   if (!timeWindow) return null;
   const match = timeWindow.match(/(\d{2}:\d{2} [AP]M) - (\d{2}:\d{2} [AP]M)/);
   if (!match) {
+    if (timeWindow === 'Full Day (08:00 AM - 08:00 PM)') return { start: 0, end: 12 };
     if (timeWindow === 'Full Day (08:00 AM - 06:00 PM)') return { start: 0, end: 10 };
     return null;
   }

@@ -6,6 +6,7 @@ import ETAPanel from './ETAPanel';
 import StylingTipsPanel from './StylingTipsPanel';
 import { getTMCredentials, sendTextMagicSMS } from '../lib/sms';
 import ReceiptTemplate from './ReceiptTemplate';
+import CommunicationHub from './CommunicationHub';
 import ImagePreviewModal from './ImagePreviewModal';
 
 const LEGAL_TEXT = `The undersigned hereby acknowledges receipt and delivery of the goods described on the annexed list or invoice and further acknowledges that said goods have been inspected and are delivered without damage. Any concealed damages or manufacturing defects must be reported within 24 hours. The customer acknowledges that outside of the approved 7-Day trial items, there are absolutely no cash refunds or exchanges after the merchandise has been received, assembled, or removed from original packaging.
@@ -154,64 +155,9 @@ export default function TeamDeliveryForm({ delivery, onBack, updateDelivery }) {
             </p>
           )}
 
-          {/* Acknowledgement PDF Option */}
-          {delivery.phone && (
-            <div style={{ marginTop: '1.5rem', textAlign: 'left' }}>
-              <label style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-main)', marginBottom: 8, display: 'block' }}>Customize SMS Message:</label>
-              <textarea
-                value={smsMsg}
-                onChange={e => setSmsMsg(e.target.value)}
-                rows={6}
-                style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid var(--border)', fontSize: 14, fontFamily: 'inherit', marginBottom: 14, resize: 'none', background: 'var(--surface)', color: 'var(--text-main)', boxSizing: 'border-box' }}
-              />
-              <button
-                onClick={async () => {
-                  if (generatingPdf) return;
-                  if (!delivery.phone) {
-                    alert('No phone number attached to this delivery.');
-                    return;
-                  }
-                  
-                  setGeneratingPdf(true);
-                  try {
-                    const element = document.getElementById('receipt-pdf-template');
-                    if (!element) throw new Error("Template not found");
-                    
-                    const opt = {
-                      margin:       0, // Use zero margin so our custom CSS margins stick perfectly
-                      filename:     `receipt-${delivery.orderNumber || delivery.id}.pdf`,
-                      image:        { type: 'jpeg', quality: 0.98 },
-                      html2canvas:  { scale: 2, useCORS: true },
-                      jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
-                    };
-
-                    const pdfBlob = await window.html2pdf().from(element).set(opt).output('blob');
-
-                    // Note: ensure 'receipts' folder works or just place in root of 'delivery-photos'
-                    const path = `receipts/${delivery.id}-${Date.now()}.pdf`;
-                    const { error } = await supabase.storage.from('delivery-photos').upload(path, pdfBlob, { contentType: 'application/pdf', upsert: true });
-                    if (error) throw error;
-                    
-                    const { data: { publicUrl } } = supabase.storage.from('delivery-photos').getPublicUrl(path);
-
-                    const finalMsg = smsMsg.replace('{{RECEIPT_LINK}}', publicUrl);
-
-                    await sendTextMagicSMS(delivery.phone, finalMsg);
-                    
-                    alert('✅ Acknowledgement PDF generated and texted successfully!');
-                  } catch (err) {
-                    console.error(err);
-                    alert('❌ Error: ' + err.message);
-                  }
-                  setGeneratingPdf(false);
-                }}
-                className="btn-primary"
-                disabled={generatingPdf}
-                style={{ width: '100%', padding: '13px 40px', fontSize: 16, borderRadius: 12, border: 'none', cursor: generatingPdf ? 'not-allowed' : 'pointer', background: generatingPdf ? '#999' : '#0b7a4a', color: '#fff', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 600 }}
-              >
-                {generatingPdf ? '⏳ Generating PDF & Sending...' : '📄 Send PDF Acknowledgement'}
-              </button>
-            </div>
+          {/* Acknowledgement Communication Hub */}
+          {(delivery.phone || delivery.email) && (
+             <CommunicationHub delivery={delivery} smsMsgDefault={smsMsg} />
           )}
 
           <button onClick={onBack} className="btn-secondary" style={{ width: '100%', padding: '13px 40px', fontSize: 16, borderRadius: 12, cursor: 'pointer', background: 'transparent', border: '1.5px solid var(--border)', color: 'var(--text-main)', fontWeight: 600 }}>

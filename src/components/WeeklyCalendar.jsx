@@ -148,7 +148,7 @@ export default function WeeklyCalendar({ deliveries, repairEvents = [], pickupEv
                       className="delivery-card"
                       onClick={e => { e.stopPropagation(); if (onSwitchTab) onSwitchTab('active'); }}
                       style={{ borderLeftColor: '#2563eb', background: '#eff6ff', cursor: 'pointer' }}
-                      title="Vendor Pickup"
+                      title="Warehouse Pickup"
                     >
                       <div className="delivery-time" style={{ color: '#1e3a8a' }}>
                         🏭 {(ev.time_window || ev.timeWindow)?.split(' - ')[0]}

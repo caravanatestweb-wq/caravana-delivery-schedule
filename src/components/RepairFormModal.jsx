@@ -9,7 +9,7 @@ const STATUSES = ['Schedule', 'Picked Up', 'Repair on site', 'In Repair', 'Ready
 const TIME_WINDOWS = [
   '08:00 AM - 10:00 AM','10:00 AM - 12:00 PM',
   '12:00 PM - 02:00 PM','02:00 PM - 04:00 PM',
-  '04:00 PM - 06:00 PM','Full Day (08:00 AM - 06:00 PM)'
+  '04:00 PM - 06:00 PM','06:00 PM - 08:00 PM','Full Day (08:00 AM - 08:00 PM)'
 ];
 
 const EMPTY = {
