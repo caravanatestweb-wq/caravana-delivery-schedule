@@ -1,7 +1,7 @@
 // TextMagic API helpers - credentials stored in localStorage
 export const getTMCredentials = () => ({
-  username: localStorage.getItem('tm_username') || '',
-  apiKey:   localStorage.getItem('tm_apikey') || '',
+  username: import.meta.env.VITE_TM_USERNAME || localStorage.getItem('tm_username') || '',
+  apiKey:   import.meta.env.VITE_TM_APIKEY || localStorage.getItem('tm_apikey') || '',
 });
 
 /**
