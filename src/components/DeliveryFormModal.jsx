@@ -40,10 +40,10 @@ const DEFAULT_FORM_STATE = {
   contactStatus: 'Scheduled',
   invoiceNumber: '',
   orderNumber: '',
-  packingList: [],
   items: [newItem()],
   status: 'Scheduled',
   notes: '',
+  doc_notes: '',
   flagged: null,
   flagReason: '',
   trialEnabled: false,
@@ -356,6 +356,17 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, o
                 <div className="form-group" style={{ marginTop: '0.75rem' }}>
                   <label>Access & Placement Notes (gate codes, stairs, room preferences...)</label>
                   <textarea name="notes" value={formData.notes} onChange={handleChange} rows="4" placeholder="Add any special instructions here..." />
+                </div>
+                <div className="form-group" style={{ marginTop: '0.75rem' }}>
+                  <label style={{ color: '#0f172a', display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Document Notes (Injected into PDF Appendix)</span>
+                    {formData.signed_doc_url && (
+                      <a href={formData.signed_doc_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8rem', background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: '4px', textDecoration: 'none', fontWeight: 600 }}>
+                        📄 View Signed Document
+                      </a>
+                    )}
+                  </label>
+                  <textarea name="doc_notes" value={formData.doc_notes} onChange={handleChange} rows="3" placeholder="Legal acknowledgments, missing item notes, or specific instructions to be stamped on the PDF..." style={{ border: '1px solid #94a3b8' }} />
                 </div>
               </section>
             </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import TeamDeliveryForm from './TeamDeliveryForm';
 import TeamCalendarCarousel from './TeamCalendarCarousel';
+import DocumentSigner from './DocumentSigner';
 import { supabase } from '../lib/supabaseClient';
 import { localDate, fmtDate, sortDeliveriesByTime } from '../lib/constants';
 
@@ -12,6 +13,7 @@ export default function TeamView({ deliveries, repairs = [], pickups = [], updat
   const [pastResults, setPastResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [groupByTeam, setGroupByTeam] = useState(false); // Toggle for swimlanes
+  const [showSignerFor, setShowSignerFor] = useState(null);
   
   const today = localDate();
 
@@ -119,6 +121,9 @@ export default function TeamView({ deliveries, repairs = [], pickups = [], updat
 
   return (
     <div className="team-center-container" style={{ paddingBottom: 40 }}>
+      {showSignerFor && (
+        <DocumentSigner delivery={showSignerFor} onClose={() => setShowSignerFor(null)} />
+      )}
       {/* Placement Cards / Tabs */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 18, flexWrap: 'wrap' }}>
         {[
@@ -237,7 +242,7 @@ export default function TeamView({ deliveries, repairs = [], pickups = [], updat
                           </span>
                         </div>
                         {todayByTeam[teamName].map((d, i) => (
-                            <StopCard key={d.id} delivery={d} stopNum={i + 1} onSelect={() => d._type === 'repair' ? onEditRepair && onEditRepair(d.originalRepair) : (d._type === 'pickup' ? alert("Warehouse Pickups are managed via Command Center") : setActiveId(d.id))} showDate={false} onUpdateRepairStatus={onUpdateRepairStatus} onUpdatePickupStatus={onUpdatePickupStatus} />
+                            <StopCard key={d.id} delivery={d} stopNum={i + 1} onSelect={() => d._type === 'repair' ? onEditRepair && onEditRepair(d.originalRepair) : (d._type === 'pickup' ? alert("Warehouse Pickups are managed via Command Center") : setActiveId(d.id))} showDate={false} onUpdateRepairStatus={onUpdateRepairStatus} onUpdatePickupStatus={onUpdatePickupStatus} onSign={() => setShowSignerFor(d)} />
                         ))}
                       </div>
                     ))}
@@ -245,7 +250,7 @@ export default function TeamView({ deliveries, repairs = [], pickups = [], updat
                 ) : (
                   <div>
                     {todayStops.map((d, i) => (
-                        <StopCard key={d.id} delivery={d} stopNum={i + 1} onSelect={() => d._type === 'repair' ? onEditRepair && onEditRepair(d.originalRepair) : (d._type === 'pickup' ? alert("Warehouse Pickups are managed via Command Center") : setActiveId(d.id))} showDate={false} onUpdateRepairStatus={onUpdateRepairStatus} onUpdatePickupStatus={onUpdatePickupStatus} />
+                        <StopCard key={d.id} delivery={d} stopNum={i + 1} onSelect={() => d._type === 'repair' ? onEditRepair && onEditRepair(d.originalRepair) : (d._type === 'pickup' ? alert("Warehouse Pickups are managed via Command Center") : setActiveId(d.id))} showDate={false} onUpdateRepairStatus={onUpdateRepairStatus} onUpdatePickupStatus={onUpdatePickupStatus} onSign={() => setShowSignerFor(d)} />
                     ))}
                   </div>
                 )}
@@ -260,7 +265,7 @@ export default function TeamView({ deliveries, repairs = [], pickups = [], updat
                 📋 {fmtHeader(dateKey)}
               </h3>
               {otherByDate[dateKey].map((d, i) => (
-                <StopCard key={d.id} delivery={d} stopNum={i + 1} onSelect={() => d._type === 'repair' ? onEditRepair && onEditRepair(d.originalRepair) : setActiveId(d.id)} onUpdateRepairStatus={onUpdateRepairStatus} onUpdatePickupStatus={onUpdatePickupStatus} />
+                <StopCard key={d.id} delivery={d} stopNum={i + 1} onSelect={() => d._type === 'repair' ? onEditRepair && onEditRepair(d.originalRepair) : setActiveId(d.id)} onUpdateRepairStatus={onUpdateRepairStatus} onUpdatePickupStatus={onUpdatePickupStatus} onSign={() => setShowSignerFor(d)} />
               ))}
             </div>
           ))}
@@ -270,7 +275,7 @@ export default function TeamView({ deliveries, repairs = [], pickups = [], updat
   );
 }
 
-function StopCard({ delivery: d, stopNum, onSelect, showDate, onUpdateRepairStatus, onUpdatePickupStatus }) {
+function StopCard({ delivery: d, stopNum, onSelect, showDate, onUpdateRepairStatus, onUpdatePickupStatus, onSign }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const isRepair = d._type === 'repair' || d.flagged === 'repair' || ['Repair on site', 'Schedule'].includes(d.status);
   const isPickup = d._type === 'pickup';
@@ -387,12 +392,25 @@ function StopCard({ delivery: d, stopNum, onSelect, showDate, onUpdateRepairStat
       <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-main)', marginBottom: 2 }}>{d.clientName}</div>
       <div style={{ fontSize: 13, color: 'var(--text-light)', marginBottom: 8 }}>{d.address}</div>
 
-      <div style={{ display: 'flex', gap: 12, fontSize: 12, color: 'var(--text-light)', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 12, fontSize: 12, color: 'var(--text-light)', flexWrap: 'wrap', alignItems: 'center' }}>
         {showDate && d.date && <span>📅 {fmtDate(d.date)}</span>}
         {d.timeWindow && <span>🕐 {d.timeWindow}</span>}
         <span>📦 {items.length} item{items.length !== 1 ? 's' : ''}</span>
         {d.deliveryTeam && <span>👥 {d.deliveryTeam}</span>}
         {checkedCount > 0 && <span style={{ color: '#0b7a4a', fontWeight: 700 }}>✓ {checkedCount}/{items.length}</span>}
+        
+        {(!d._type || d._type === 'delivery') && (
+          <button 
+            type="button"
+            onClick={(e) => { e.stopPropagation(); if (onSign) onSign(); }}
+            style={{ 
+              marginLeft: 'auto', padding: '4px 10px', background: '#eff6ff', 
+              color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: 6, 
+              fontSize: 11, fontWeight: 700, cursor: 'pointer' 
+            }}>
+            🖋️ Sign Paperwork
+          </button>
+        )}
       </div>
     </button>
   );
