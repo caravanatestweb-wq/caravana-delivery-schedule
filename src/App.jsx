@@ -17,6 +17,7 @@ import ReceiptTemplate from './components/ReceiptTemplate';
 import GlobalNotificationModal from './components/GlobalNotificationModal';
 import ImagePreviewModal from './components/ImagePreviewModal';
 import CommandCenterModal from './components/CommandCenterModal';
+import MasterBatcherForm from './components/MasterBatcherForm';
 import { supabase } from './lib/supabaseClient';
 import { localDate, getFollowUpType, sortDeliveriesByTime, fmtDate, getStatusBg, getStatusColor } from './lib/constants';
 import './App.css';
@@ -105,6 +106,7 @@ function App() {
   const [teamAlerts, setTeamAlerts] = useState([]);
   const [pickups, setPickups] = useState([]);
   const [isPickupModalOpen, setIsPickupModalOpen] = useState(false);
+  const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
   const [editingPickup, setEditingPickup] = useState(null);
   const [isCommandCenterOpen, setIsCommandCenterOpen] = useState(false);
   const [viewMode, setViewMode] = useState('weekly');
@@ -457,6 +459,8 @@ function App() {
       flagDate: deliveryData.flagDate || null,
       photoUrls: deliveryData.photoUrls || [],
       locked: deliveryData.locked || false,
+      base_doc_url: deliveryData.base_doc_url || null,
+      signed_doc_url: deliveryData.signed_doc_url || null,
     };
 
     if (isNew) {
@@ -607,6 +611,7 @@ function App() {
                   📦 Archive ({archivedDeliveries.length})
                 </button>
                 <button className="btn-secondary" onClick={handleOpenNewPickup} style={{ color: '#2563eb', borderColor: '#bfdbfe' }}>🏭 Pickup</button>
+                <button className="btn-secondary" onClick={() => setIsBatchModalOpen(true)} style={{ color: '#1e3a8a', borderColor: '#bfdbfe', background: '#e0e7ff' }}>🚀 Create Batch Pickup</button>
                 <button className="btn-primary" onClick={handleOpenNewModal}>+ New Delivery</button>
               </>
             )}
@@ -863,6 +868,13 @@ function App() {
         pickup={editingPickup}
         teamMembers={teamMembers}
       />
+      
+      {isBatchModalOpen && (
+        <MasterBatcherForm
+          onClose={() => setIsBatchModalOpen(false)}
+          teamMembers={teamMembers}
+        />
+      )}
 
       {printingDelivery && (
         <PackingList

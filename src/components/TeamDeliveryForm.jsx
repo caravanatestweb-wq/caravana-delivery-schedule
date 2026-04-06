@@ -8,6 +8,7 @@ import { getTMCredentials, sendTextMagicSMS } from '../lib/sms';
 import ReceiptTemplate from './ReceiptTemplate';
 import CommunicationHub from './CommunicationHub';
 import ImagePreviewModal from './ImagePreviewModal';
+import DocumentSigner from './DocumentSigner';
 
 const LEGAL_TEXT = `The undersigned hereby acknowledges receipt and delivery of the goods described on the annexed list or invoice and further acknowledges that said goods have been inspected and are delivered without damage. Any concealed damages or manufacturing defects must be reported within 24 hours. The customer acknowledges that outside of the approved 7-Day trial items, there are absolutely no cash refunds or exchanges after the merchandise has been received, assembled, or removed from original packaging.
 
@@ -55,6 +56,7 @@ export default function TeamDeliveryForm({ delivery, onBack, updateDelivery }) {
   const [done, setDone] = useState(false);
   const [completeMode, setCompleteMode] = useState('Delivered');
   const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [showSigner, setShowSigner] = useState(false);
 
   const firstName = (delivery.clientName || '').split(' ')[0] || 'there';
   const defaultSmsMsg = isReturn 
@@ -100,8 +102,9 @@ export default function TeamDeliveryForm({ delivery, onBack, updateDelivery }) {
   const filledItems = items.filter(it => it.description);
   const checkedItems = filledItems.filter(it => it.delivered);
   const allDelivered = filledItems.length > 0 && filledItems.every(it => it.delivered);
-  const hasSignature = !!sigBlob || !!signatureUrl;
-  const canComplete = allDelivered && condition && hasSignature && printName.trim();
+  const isLahsaMdg = delivery.source === 'LAHSA' && delivery.base_doc_url;
+  const hasSignature = isLahsaMdg ? !!delivery.signed_doc_url : (!!sigBlob || !!signatureUrl);
+  const canComplete = allDelivered && condition && hasSignature && (isLahsaMdg ? true : printName.trim());
 
   // Signature upload
   const handleSignatureSave = async (blob) => {
@@ -423,35 +426,60 @@ export default function TeamDeliveryForm({ delivery, onBack, updateDelivery }) {
         <h3 style={{ margin: '0 0 12px', fontSize: 15, fontWeight: 700, color: 'var(--text-main)' }}>
           ✍️ Customer Signature
         </h3>
-        <div style={{ fontSize: 12, lineHeight: 1.7, color: 'var(--text-light)', background: 'var(--bg-color)', padding: 12, borderRadius: 8, borderLeft: '3px solid #d4960a', marginBottom: 14 }}>
-          {isReturn ? PICKUP_TEXT : LEGAL_TEXT}
-        </div>
-        {!isReturn && delivery.date && (
-          <div style={{ padding: '8px 14px', background: '#eef7f0', borderRadius: 8, fontSize: 13, color: '#0b7a4a', fontWeight: 600, marginBottom: 14 }}>
-            📋 7-Day Home Comfort Trial expires: {fmtDate(addDays(delivery.date, 7))}
-          </div>
+
+        {delivery.source === 'LAHSA' && delivery.base_doc_url ? (
+          <>
+            <div style={{ marginBottom: 16 }}>
+              <button 
+                onClick={() => setShowSigner(true)}
+                style={{
+                  width: '100%', padding: '14px', background: '#0b7a4a', color: '#fff', 
+                  borderRadius: 8, fontSize: 16, fontWeight: 700, border: 'none', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+                }}
+              >
+                📄 Open & Sign MDG Acknowledgment
+              </button>
+            </div>
+            {delivery.signed_doc_url && (
+              <div style={{ padding: '10px 14px', background: '#eef7f0', borderRadius: 8, fontSize: 13, color: '#0b7a4a', fontWeight: 600, marginBottom: 14 }}>
+                ✅ Document has been signed and saved.
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <div style={{ fontSize: 12, lineHeight: 1.7, color: 'var(--text-light)', background: 'var(--bg-color)', padding: 12, borderRadius: 8, borderLeft: '3px solid #d4960a', marginBottom: 14 }}>
+              {isReturn ? PICKUP_TEXT : LEGAL_TEXT}
+            </div>
+            {!isReturn && delivery.date && (
+              <div style={{ padding: '8px 14px', background: '#eef7f0', borderRadius: 8, fontSize: 13, color: '#0b7a4a', fontWeight: 600, marginBottom: 14 }}>
+                📋 7-Day Home Comfort Trial expires: {fmtDate(addDays(delivery.date, 7))}
+              </div>
+            )}
+            <SignaturePad onSave={handleSignatureSave} existingUrl={signatureUrl} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 14 }}>
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 6 }}>Print Name *</label>
+                <input
+                  value={printName}
+                  onChange={e => setPrintName(e.target.value)}
+                  placeholder="Customer full name"
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--surface)', color: 'var(--text-main)', fontSize: 15, fontFamily: 'inherit', boxSizing: 'border-box' }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 6 }}>Date</label>
+                <input
+                  type="date"
+                  value={signDate}
+                  onChange={e => setSignDate(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--surface)', color: 'var(--text-main)', fontSize: 15, fontFamily: 'inherit', boxSizing: 'border-box' }}
+                />
+              </div>
+            </div>
+          </>
         )}
-        <SignaturePad onSave={handleSignatureSave} existingUrl={signatureUrl} />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 14 }}>
-          <div>
-            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 6 }}>Print Name *</label>
-            <input
-              value={printName}
-              onChange={e => setPrintName(e.target.value)}
-              placeholder="Customer full name"
-              style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--surface)', color: 'var(--text-main)', fontSize: 15, fontFamily: 'inherit', boxSizing: 'border-box' }}
-            />
-          </div>
-          <div>
-            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 6 }}>Date</label>
-            <input
-              type="date"
-              value={signDate}
-              onChange={e => setSignDate(e.target.value)}
-              style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--surface)', color: 'var(--text-main)', fontSize: 15, fontFamily: 'inherit', boxSizing: 'border-box' }}
-            />
-          </div>
-        </div>
       </div>
 
       {/* Sticky bottom action bar */}
@@ -502,11 +530,12 @@ export default function TeamDeliveryForm({ delivery, onBack, updateDelivery }) {
           <p style={{ textAlign: 'center', fontSize: 12, color: '#c89b0a', marginTop: 8 }}>
             {!allDelivered && filledItems.length > 0 ? '⚠️ Confirm all items first' :
              !condition ? '⚠️ Select condition' :
-             !hasSignature ? '⚠️ Capture signature' :
-             !printName.trim() ? '⚠️ Enter customer print name' : ''}
+             !hasSignature ? (isLahsaMdg ? '⚠️ Sign MDG Document' : '⚠️ Capture signature') :
+             (!isLahsaMdg && !printName.trim()) ? '⚠️ Enter customer print name' : ''}
           </p>
         )}
       </div>
+      {showSigner && <DocumentSigner delivery={delivery} onClose={() => setShowSigner(false)} />}
     </div>
   );
 }

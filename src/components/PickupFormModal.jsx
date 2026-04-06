@@ -6,9 +6,9 @@ export default function PickupFormModal({ isOpen, onClose, onSave, onDelete, pic
     id: null,
     date: new Date().toISOString().split('T')[0],
     time_window: '08:00 AM - 10:00 AM',
-    vendor_name: '',
+    vendor_name: 'Various Vendors',
     warehouse_name: '',
-    order_number: '',
+    order_number: 'MULTIPLE',
     items_list: '',
     address: '',
     notes: '',
@@ -18,12 +18,37 @@ export default function PickupFormModal({ isOpen, onClose, onSave, onDelete, pic
 
   const [formData, setFormData] = useState(getInitialState());
   const [isSaving, setIsSaving] = useState(false);
+  
+  // State for dynamic TimeBlock -> Vendor -> Order -> Items hierarchy
+  const newId = () => Date.now() + Math.random();
+  const [vendors, setVendors] = useState([{
+    id: newId(),
+    name: '',
+    orders: [{ id: newId(), po: '', items: [{ id: newId(), desc: '', isShowroom: false }] }]
+  }]);
 
   useEffect(() => {
     if (pickup) {
       setFormData({ ...getInitialState(), ...pickup });
+      if (pickup.items_list && pickup.items_list.trim().startsWith('[')) {
+        try {
+          setVendors(JSON.parse(pickup.items_list));
+        } catch(e) {}
+      } else {
+        // Legacy support
+        setVendors([{
+          id: newId(),
+          name: pickup.vendor_name || '',
+          orders: [{ id: newId(), po: pickup.order_number || '', items: [{ id: newId(), desc: pickup.items_list || '', isShowroom: false }] }]
+        }]);
+      }
     } else {
       setFormData(getInitialState());
+      setVendors([{
+        id: newId(),
+        name: '',
+        orders: [{ id: newId(), po: '', items: [{ id: newId(), desc: '', isShowroom: false }] }]
+      }]);
     }
   }, [pickup, isOpen]);
 
@@ -32,7 +57,13 @@ export default function PickupFormModal({ isOpen, onClose, onSave, onDelete, pic
   const handleSubmit = async (e, keepOpen = false) => {
     e.preventDefault();
     setIsSaving(true);
-    const success = await onSave(formData, keepOpen);
+    const payload = {
+      ...formData,
+      vendor_name: vendors.map(v => v.name).filter(Boolean).join(', ') || 'Various Vendors',
+      items_list: JSON.stringify(vendors)
+    };
+
+    const success = await onSave(payload, keepOpen);
     setIsSaving(false);
     
     if (success && keepOpen) {
@@ -40,12 +71,13 @@ export default function PickupFormModal({ isOpen, onClose, onSave, onDelete, pic
       setFormData(prev => ({
         ...prev,
         id: null,
-        vendor_name: '',
-        warehouse_name: '',
-        order_number: '',
-        items_list: '',
         notes: ''
       }));
+      setVendors([{
+        id: newId(),
+        name: '',
+        orders: [{ id: newId(), po: '', items: [{ id: newId(), desc: '', isShowroom: false }] }]
+      }]);
     }
   };
 
@@ -72,16 +104,8 @@ export default function PickupFormModal({ isOpen, onClose, onSave, onDelete, pic
             </div>
           </div>
 
-          {/* Row 2: Vendors & Teams */}
-          <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
-             <div className="form-group">
-               <label>Vendor Name <span style={{ color: '#c53030' }}>*</span></label>
-               <input type="text" required placeholder="e.g. Ashley Furniture" value={formData.vendor_name || ''} onChange={e => setFormData({ ...formData, vendor_name: e.target.value })} />
-             </div>
-             <div className="form-group">
-               <label>Warehouse Name / ID</label>
-               <input type="text" placeholder="e.g. Fontana Depot 1" value={formData.warehouse_name || ''} onChange={e => setFormData({ ...formData, warehouse_name: e.target.value })} />
-             </div>
+          {/* Vendors & Teams */}
+          <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '16px' }}>
              <div className="form-group">
                <label>Assigned Team</label>
                <select value={formData.team_id || 'Team 1'} onChange={e => setFormData({ ...formData, team_id: e.target.value })}>
@@ -90,23 +114,115 @@ export default function PickupFormModal({ isOpen, onClose, onSave, onDelete, pic
                  {teamMembers.map(m => <option key={m} value={m}>{m}</option>)}
                </select>
              </div>
+             <div className="form-group">
+               <label>Warehouse Name / ID</label>
+               <input type="text" placeholder="e.g. Fontana Depot 1" value={formData.warehouse_name || ''} onChange={e => setFormData({ ...formData, warehouse_name: e.target.value })} />
+             </div>
           </div>
 
           <div className="form-group">
-            <label>Vendor Address</label>
+            <label>Master Loading Dock Address (if same for all)</label>
             <input type="text" placeholder="Loading dock details or full address..." value={formData.address || ''} onChange={e => setFormData({ ...formData, address: e.target.value })} />
           </div>
 
-          {/* Row 3: Orders */}
-          <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '16px' }}>
-            <div className="form-group">
-              <label>Order Number (PO #)</label>
-              <input type="text" placeholder="e.g. PO-987654" value={formData.order_number || ''} onChange={e => setFormData({ ...formData, order_number: e.target.value })} />
+          {/* DYNAMIC VENDORS / ORDERS / ITEMS */}
+          <div style={{ background: '#f8fafc', padding: 16, borderRadius: 8, border: '1px solid #cbd5e1', marginBottom: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <label style={{ fontSize: 13, fontWeight: 700, color: '#1e293b', textTransform: 'uppercase' }}>Box/Items Hierarchy</label>
             </div>
-            <div className="form-group">
-              <label>Items List</label>
-              <textarea rows="2" placeholder="e.g. 2x Sectional Sofas, 1x Dining Set" value={formData.items_list || ''} onChange={e => setFormData({ ...formData, items_list: e.target.value })}></textarea>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {vendors.map((vendor, vIndex) => (
+                <div key={vendor.id} style={{ background: '#fff', padding: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                  
+                  {/* VENDOR LEVEL */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                    <div style={{ background: '#dbeafe', color: '#1e40af', padding: '4px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700 }}>VENDOR {vIndex + 1}</div>
+                    <input type="text" placeholder="Vendor Name (e.g. Ashley)" value={vendor.name} 
+                      onChange={e => {
+                        const newV = [...vendors];
+                        newV[vIndex].name = e.target.value;
+                        setVendors(newV);
+                      }}
+                      style={{ flex: 1, padding: '6px 10px', fontSize: 13, borderRadius: 6, border: '1px solid #cbd5e1' }} />
+                    <button type="button" onClick={() => setVendors(vendors.filter((_, i) => i !== vIndex))} style={{ color: '#c53030', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16 }}>×</button>
+                  </div>
+
+                  {/* ORDERS LEVEL */}
+                  <div style={{ paddingLeft: 16, borderLeft: '2px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {vendor.orders.map((order, oIndex) => (
+                      <div key={order.id} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>Order/PO #</span>
+                          <input type="text" placeholder="PO-12345" value={order.po}
+                            onChange={e => {
+                              const newV = [...vendors];
+                              newV[vIndex].orders[oIndex].po = e.target.value;
+                              setVendors(newV);
+                            }}
+                            style={{ width: 140, padding: '4px 8px', fontSize: 12, borderRadius: 4, border: '1px solid #cbd5e1' }} />
+                          <button type="button" onClick={() => {
+                            const newV = [...vendors];
+                            newV[vIndex].orders = newV[vIndex].orders.filter((_, i) => i !== oIndex);
+                            setVendors(newV);
+                          }} style={{ color: '#c53030', background: 'none', border: 'none', cursor: 'pointer', fontSize: 12 }}>Remove PO</button>
+                        </div>
+                        
+                        {/* ITEMS LEVEL */}
+                        <div style={{ paddingLeft: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {order.items.map((item, iIndex) => (
+                            <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span style={{ fontSize: 10, color: '#94a3b8' }}>↳</span>
+                              <input type="text" placeholder="Item description" value={item.desc}
+                                onChange={e => {
+                                  const newV = [...vendors];
+                                  newV[vIndex].orders[oIndex].items[iIndex].desc = e.target.value;
+                                  setVendors(newV);
+                                }} style={{ flex: 1, padding: '4px 8px', fontSize: 12, borderRadius: 4, border: '1px solid #e2e8f0' }} />
+                              <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, cursor: 'pointer', color: '#475569', background: '#f1f5f9', padding: '4px 8px', borderRadius: 4 }}>
+                                <input type="checkbox" checked={item.isShowroom} 
+                                  onChange={e => {
+                                    const newV = [...vendors];
+                                    newV[vIndex].orders[oIndex].items[iIndex].isShowroom = e.target.checked;
+                                    setVendors(newV);
+                                  }} /> Showroom Stock
+                              </label>
+                              <button type="button" onClick={() => {
+                                const newV = [...vendors];
+                                newV[vIndex].orders[oIndex].items = newV[vIndex].orders[oIndex].items.filter((_, i) => i !== iIndex);
+                                setVendors(newV);
+                              }} style={{ color: '#94a3b8', background: 'none', border: 'none', cursor: 'pointer', fontSize: 12 }}>×</button>
+                            </div>
+                          ))}
+                          <button type="button" 
+                            onClick={() => {
+                              const newV = [...vendors];
+                              newV[vIndex].orders[oIndex].items.push({ id: newId(), desc: '', isShowroom: false });
+                              setVendors(newV);
+                            }}
+                            style={{ width: 'max-content', padding: '2px 8px', fontSize: 11, color: '#2563eb', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 4, cursor: 'pointer' }}>+ Add Item</button>
+                        </div>
+                      </div>
+                    ))}
+                    <button type="button" 
+                      onClick={() => {
+                        const newV = [...vendors];
+                        newV[vIndex].orders.push({ id: newId(), po: '', items: [{ id: newId(), desc: '', isShowroom: false }] });
+                        setVendors(newV);
+                      }}
+                      style={{ width: 'max-content', padding: '4px 12px', fontSize: 11, color: '#0f766e', background: '#ccfbf1', border: '1px solid #99f6e4', borderRadius: 4, cursor: 'pointer', alignSelf: 'flex-start' }}>+ Add PO/Order</button>
+                  </div>
+                </div>
+              ))}
             </div>
+
+            <button type="button" 
+              onClick={() => {
+                setVendors([...vendors, { id: newId(), name: '', orders: [{ id: newId(), po: '', items: [{ id: newId(), desc: '', isShowroom: false }] }] }]);
+              }}
+              style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, color: '#fff', background: '#1e40af', border: 'none', borderRadius: 6, cursor: 'pointer', marginTop: 16 }}>
+              + Add New Vendor
+            </button>
           </div>
 
           <div className="form-group">

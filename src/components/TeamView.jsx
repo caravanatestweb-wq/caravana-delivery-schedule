@@ -7,15 +7,32 @@ import { localDate, fmtDate, sortDeliveriesByTime } from '../lib/constants';
 
 export default function TeamView({ deliveries, repairs = [], pickups = [], updateDelivery, onEditRepair, onUpdateRepairStatus, onUpdatePickupStatus }) {
   const [activeId, setActiveId] = useState(null);
+  const [signerDelivery, setSignerDelivery] = useState(null);
   const [viewMode, setViewMode] = useState('list');
   const [filterTab, setFilterTab] = useState('active'); // active, today, returns, repairs, past
   const [searchQuery, setSearchQuery] = useState('');
   const [pastResults, setPastResults] = useState([]);
+  const [batchPickups, setBatchPickups] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [groupByTeam, setGroupByTeam] = useState(false); // Toggle for swimlanes
-  const [showSignerFor, setShowSignerFor] = useState(null);
   
   const today = localDate();
+
+  useEffect(() => {
+    const fetchBatchPickups = async () => {
+      const { data } = await supabase.from('batch_pickups').select('*').neq('status', 'Completed');
+      if (data) setBatchPickups(data);
+    };
+    fetchBatchPickups();
+
+    const channel = supabase.channel('batch-pickups-ch')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'batch_pickups' }, () => {
+        fetchBatchPickups();
+      })
+      .subscribe();
+      
+    return () => supabase.removeChannel(channel);
+  }, []);
 
   const activeDelivery = deliveries.find(d => d.id === activeId) || 
                          pastResults.find(d => d.id === activeId);
@@ -58,14 +75,27 @@ export default function TeamView({ deliveries, repairs = [], pickups = [], updat
       flagged: 'pickup'
   }));
 
-  const mergedLive = [...deliveries, ...mappedRepairs, ...mappedPickups];
+  const mappedBatchPickups = batchPickups.map(b => ({
+      _type: 'batch_pickup',
+      id: 'bp-' + b.id,
+      originalBatch: b,
+      date: b.date || 'No Date',
+      timeWindow: b.timeWindow || '',
+      clientName: `📦 Master Batch: ${b.vendors_list?.length || 0} Vendors`,
+      address: 'Multiple Warehouse Locations',
+      status: b.status,
+      deliveryTeam: b.deliveryTeam || '',
+      flagged: 'batch'
+  }));
+
+  const mergedLive = [...deliveries, ...mappedRepairs, ...mappedPickups, ...mappedBatchPickups];
 
   // Filtering based on tab
   let teamVisible = [];
   if (filterTab === 'active') {
     teamVisible = mergedLive.filter(d => 
       (!['Delivered','Archived','Completed', 'Returned'].includes(d.status)) &&
-      (d._type === 'repair' ? true : d._type === 'pickup' ? true : (['Scheduled', 'In Progress', 'Contacted', 'Ready'].includes(d.status) || d.flagged))
+      (d._type === 'repair' ? true : d._type === 'pickup' ? true : d._type === 'batch_pickup' ? true : (['Scheduled', 'In Progress', 'Contacted', 'Ready'].includes(d.status) || d.flagged))
     );
   } else if (filterTab === 'today') {
     teamVisible = mergedLive.filter(d => d.date === today && !['Archived', 'Returned'].includes(d.status));
@@ -121,9 +151,6 @@ export default function TeamView({ deliveries, repairs = [], pickups = [], updat
 
   return (
     <div className="team-center-container" style={{ paddingBottom: 40 }}>
-      {showSignerFor && (
-        <DocumentSigner delivery={showSignerFor} onClose={() => setShowSignerFor(null)} />
-      )}
       {/* Placement Cards / Tabs */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 18, flexWrap: 'wrap' }}>
         {[
@@ -242,7 +269,7 @@ export default function TeamView({ deliveries, repairs = [], pickups = [], updat
                           </span>
                         </div>
                         {todayByTeam[teamName].map((d, i) => (
-                            <StopCard key={d.id} delivery={d} stopNum={i + 1} onSelect={() => d._type === 'repair' ? onEditRepair && onEditRepair(d.originalRepair) : (d._type === 'pickup' ? alert("Warehouse Pickups are managed via Command Center") : setActiveId(d.id))} showDate={false} onUpdateRepairStatus={onUpdateRepairStatus} onUpdatePickupStatus={onUpdatePickupStatus} onSign={() => setShowSignerFor(d)} />
+                            <StopCard key={d.id} delivery={d} stopNum={i + 1} onSelect={() => d._type === 'repair' ? onEditRepair && onEditRepair(d.originalRepair) : (d._type === 'pickup' ? alert("Warehouse Pickups are managed via Command Center") : setActiveId(d.id))} showDate={false} onUpdateRepairStatus={onUpdateRepairStatus} onUpdatePickupStatus={onUpdatePickupStatus} onSign={() => setSignerDelivery(d)} />
                         ))}
                       </div>
                     ))}
@@ -250,7 +277,7 @@ export default function TeamView({ deliveries, repairs = [], pickups = [], updat
                 ) : (
                   <div>
                     {todayStops.map((d, i) => (
-                        <StopCard key={d.id} delivery={d} stopNum={i + 1} onSelect={() => d._type === 'repair' ? onEditRepair && onEditRepair(d.originalRepair) : (d._type === 'pickup' ? alert("Warehouse Pickups are managed via Command Center") : setActiveId(d.id))} showDate={false} onUpdateRepairStatus={onUpdateRepairStatus} onUpdatePickupStatus={onUpdatePickupStatus} onSign={() => setShowSignerFor(d)} />
+                        <StopCard key={d.id} delivery={d} stopNum={i + 1} onSelect={() => d._type === 'repair' ? onEditRepair && onEditRepair(d.originalRepair) : (d._type === 'pickup' ? alert("Warehouse Pickups are managed via Command Center") : setActiveId(d.id))} showDate={false} onUpdateRepairStatus={onUpdateRepairStatus} onUpdatePickupStatus={onUpdatePickupStatus} onSign={() => setSignerDelivery(d)} />
                     ))}
                   </div>
                 )}
@@ -265,12 +292,14 @@ export default function TeamView({ deliveries, repairs = [], pickups = [], updat
                 📋 {fmtHeader(dateKey)}
               </h3>
               {otherByDate[dateKey].map((d, i) => (
-                <StopCard key={d.id} delivery={d} stopNum={i + 1} onSelect={() => d._type === 'repair' ? onEditRepair && onEditRepair(d.originalRepair) : setActiveId(d.id)} onUpdateRepairStatus={onUpdateRepairStatus} onUpdatePickupStatus={onUpdatePickupStatus} onSign={() => setShowSignerFor(d)} />
+                <StopCard key={d.id} delivery={d} stopNum={i + 1} onSelect={() => d._type === 'repair' ? onEditRepair && onEditRepair(d.originalRepair) : setActiveId(d.id)} onUpdateRepairStatus={onUpdateRepairStatus} onUpdatePickupStatus={onUpdatePickupStatus} onSign={() => setSignerDelivery(d)} />
               ))}
             </div>
           ))}
         </>
       )}
+
+      {signerDelivery && <DocumentSigner delivery={signerDelivery} onClose={() => setSignerDelivery(null)} />}
     </div>
   );
 }
@@ -279,13 +308,70 @@ function StopCard({ delivery: d, stopNum, onSelect, showDate, onUpdateRepairStat
   const [isExpanded, setIsExpanded] = useState(false);
   const isRepair = d._type === 'repair' || d.flagged === 'repair' || ['Repair on site', 'Schedule'].includes(d.status);
   const isPickup = d._type === 'pickup';
+  const isBatchPickup = d._type === 'batch_pickup';
 
-  const handleQuickComplete = (e) => {
+  const handleQuickComplete = async (e) => {
     e.stopPropagation();
     const newStatus = d.status === 'Completed' ? 'Scheduled' : 'Completed';
     if (isPickup && onUpdatePickupStatus) onUpdatePickupStatus(d.originalPickup.id, newStatus);
+    if (isBatchPickup) {
+      await supabase.from('batch_pickups').update({ status: newStatus }).eq('id', d.originalBatch.id);
+      // Let the channel listener or next refresh update the UI
+    }
     if (d._type === 'repair' && onUpdateRepairStatus) onUpdateRepairStatus(d.originalRepair.id, newStatus);
   };
+
+  if (isBatchPickup) {
+    return (
+      <div style={{ background: '#e0e7ff', border: '1px solid #c7d2fe', borderLeftWidth: 6, borderLeftColor: '#1e3a8a', borderRadius: 12, padding: '14px 16px', marginBottom: 10, boxShadow: 'var(--shadow-sm)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div onClick={() => setIsExpanded(!isExpanded)} style={{ cursor: 'pointer', flex: 1, paddingRight: 10 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: '#1e3a8a', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
+              [#{stopNum}] 🚀 MASTER BATCH PICKUP
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#111827', marginBottom: 2 }}>{d.clientName}</div>
+            <div style={{ fontSize: 13, color: '#4b5563', marginBottom: 6 }}>{d.address}</div>
+            <div style={{ display: 'flex', gap: 12, fontSize: 12, color: '#374151', flexWrap: 'wrap' }}>
+              {showDate && d.date && <span>📅 {fmtDate(d.date)}</span>}
+              {d.timeWindow && <span>🕐 {d.timeWindow}</span>}
+              {isExpanded ? '🔽 hide items' : '▶️ view items'}
+            </div>
+          </div>
+          <div onClick={handleQuickComplete} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', flexShrink: 0 }}>
+            <div style={{ width: 34, height: 34, border: '2px solid #1e3a8a', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', background: d.status === 'Completed' ? '#1e3a8a' : '#fff' }}>
+              {d.status === 'Completed' && <span style={{ color: '#fff', fontSize: 18, lineHeight: 1 }}>✓</span>}
+            </div>
+            <span style={{ fontSize: 10, fontWeight: 700, color: '#1e3a8a', marginTop: 4 }}>COMPLETE<br/>BATCH</span>
+          </div>
+        </div>
+        
+        {isExpanded && (
+          <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #c7d2fe', fontSize: 13, color: '#111827' }}>
+            {d.originalBatch?.vendors_list && d.originalBatch.vendors_list.map((ven, idx) => (
+              <div key={idx} style={{ marginBottom: 16, background: '#f8fafc', padding: '10px', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                <div style={{ fontWeight: 800, fontSize: 14, color: '#1e3a8a', marginBottom: 4, display: 'flex', justifyContent: 'space-between' }}>
+                  <span>🏭 {ven.vendorName}</span>
+                  {ven.showroomStock && <span style={{ fontSize: 10, background: '#fee2e2', color: '#b91c1c', padding: '2px 6px', borderRadius: 4 }}>SHOWROOM</span>}
+                </div>
+                {ven.orders && ven.orders.map((ord, oIdx) => (
+                  <div key={oIdx} style={{ marginTop: 8, paddingLeft: 8, borderLeft: '3px solid #cbd5e1' }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 2 }}>PO: {ord.orderNum}</div>
+                    <ul style={{ margin: 0, paddingLeft: 16, color: '#334155' }}>
+                      {ord.items && ord.items.map((it, iIdx) => (
+                        <li key={iIdx}>
+                          <strong>{it.qty}x</strong> {it.description}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   if (isPickup) {
     return (
@@ -367,7 +453,7 @@ function StopCard({ delivery: d, stopNum, onSelect, showDate, onUpdateRepairStat
   const isReturn = !!d.flagged && d.flagged !== 'repair';
 
   return (
-    <button
+    <div
       onClick={onSelect}
       style={{
         width: '100%', textAlign: 'left',
@@ -398,20 +484,21 @@ function StopCard({ delivery: d, stopNum, onSelect, showDate, onUpdateRepairStat
         <span>📦 {items.length} item{items.length !== 1 ? 's' : ''}</span>
         {d.deliveryTeam && <span>👥 {d.deliveryTeam}</span>}
         {checkedCount > 0 && <span style={{ color: '#0b7a4a', fontWeight: 700 }}>✓ {checkedCount}/{items.length}</span>}
-        
-        {(!d._type || d._type === 'delivery') && (
-          <button 
-            type="button"
-            onClick={(e) => { e.stopPropagation(); if (onSign) onSign(); }}
-            style={{ 
-              marginLeft: 'auto', padding: '4px 10px', background: '#eff6ff', 
-              color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: 6, 
-              fontSize: 11, fontWeight: 700, cursor: 'pointer' 
-            }}>
-            🖋️ Sign Paperwork
-          </button>
-        )}
       </div>
-    </button>
+
+      {d.source === 'LAHSA' && d.base_doc_url && (
+        <div 
+          onClick={(e) => { e.stopPropagation(); onSign && onSign(); }}
+          style={{ 
+            marginTop: 12, padding: '12px', background: '#0b7a4a', color: '#fff', 
+            borderRadius: 8, fontSize: 14, fontWeight: 700, display: 'flex', 
+            alignItems: 'center', justifyContent: 'center', gap: 8, 
+            boxShadow: '0 2px 4px rgba(11,122,74,0.2)'
+          }}
+        >
+          📄 Open & Sign MDG Acknowledgment
+        </div>
+      )}
+    </div>
   );
 }

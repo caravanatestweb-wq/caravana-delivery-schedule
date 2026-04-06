@@ -43,13 +43,13 @@ const DEFAULT_FORM_STATE = {
   items: [newItem()],
   status: 'Scheduled',
   notes: '',
-  doc_notes: '',
+  base_doc_url: '',
   flagged: null,
   flagReason: '',
   trialEnabled: false,
 };
 
-const SOURCES = ['Caravana store', 'Caravana Outlet', 'Caravana Web', 'LAHSA', 'HACLB', 'Synergy', 'Other'];
+const SOURCES = ['Caravana store', 'Caravana Outlet', 'Caravana Web', 'LAHSA', 'MDG', 'HACLB', 'Synergy', 'Other'];
 const STATUSES = ['Pending', 'Sourcing', 'Ready', 'Scheduled', 'In Progress', 'Delivered', 'Reschedule', 'Contacted'];
 const HOUR_OPTIONS = [
   '08:00 AM','09:00 AM','10:00 AM','11:00 AM',
@@ -115,7 +115,7 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, o
   if (!isOpen) return null;
 
   const busyRanges = allDeliveries
-    .filter(d => d.date === formData.date && d.id !== formData.id)
+    .filter(d => d.date === formData.date && d.id !== formData.id && d.deliveryTeam === formData.deliveryTeam)
     .map(d => {
       const p = d.timeWindow?.split(' - ') || [];
       return { start: timeToMinutes(p[0]), end: timeToMinutes(p[1] || p[0]) };
@@ -156,6 +156,19 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, o
       const { data: { publicUrl } } = supabase.storage.from('delivery-photos').getPublicUrl(fileName);
       setFormData(prev => ({ ...prev, photoUrls: [...(prev.photoUrls || []), publicUrl] }));
     } else alert('Upload error: ' + error.message);
+    setIsUploading(false);
+  };
+
+  const handleBaseDocUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setIsUploading(true);
+    const fileName = `${Date.now()}_mdg_base_${file.name.replace(/\s/g, '_')}`;
+    const { data, error } = await supabase.storage.from('signed_documents').upload(fileName, file);
+    if (!error) {
+      const { data: { publicUrl } } = supabase.storage.from('signed_documents').getPublicUrl(fileName);
+      setFormData(prev => ({ ...prev, base_doc_url: publicUrl }));
+    } else alert('Document Upload error: ' + error.message);
     setIsUploading(false);
   };
 
@@ -357,17 +370,6 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, o
                   <label>Access & Placement Notes (gate codes, stairs, room preferences...)</label>
                   <textarea name="notes" value={formData.notes} onChange={handleChange} rows="4" placeholder="Add any special instructions here..." />
                 </div>
-                <div className="form-group" style={{ marginTop: '0.75rem' }}>
-                  <label style={{ color: '#0f172a', display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Document Notes (Injected into PDF Appendix)</span>
-                    {formData.signed_doc_url && (
-                      <a href={formData.signed_doc_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8rem', background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: '4px', textDecoration: 'none', fontWeight: 600 }}>
-                        📄 View Signed Document
-                      </a>
-                    )}
-                  </label>
-                  <textarea name="doc_notes" value={formData.doc_notes} onChange={handleChange} rows="3" placeholder="Legal acknowledgments, missing item notes, or specific instructions to be stamped on the PDF..." style={{ border: '1px solid #94a3b8' }} />
-                </div>
               </section>
             </div>
 
@@ -402,6 +404,26 @@ export default function DeliveryFormModal({ isOpen, onClose, onSave, onDelete, o
                     />
                   )}
                 </div>
+
+                {/* CONDITIONAL MDG UPLOAD */}
+                {formData.source === 'LAHSA' && (
+                  <div className="form-group" style={{ marginTop: '0.75rem', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 8, padding: 12 }}>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155' }}>📄 Upload MDG Acknowledgment (PDF/JPG)</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
+                      <label className="btn-secondary btn-sm" style={{ cursor: 'pointer', background: '#fff', border: '1px solid #cbd5e1', padding: '6px 12px' }}>
+                        <input type="file" accept="application/pdf,image/jpeg,image/jpg" style={{ display: 'none' }} onChange={handleBaseDocUpload} />
+                        {isUploading ? 'Uploading...' : 'Choose File'}
+                      </label>
+                      {formData.base_doc_url ? (
+                        <a href={formData.base_doc_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8rem', color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}>
+                          ✓ Document Uploaded
+                        </a>
+                      ) : (
+                        <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>No file chosen</span>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Team + Scheduled By */}
                 <div className="form-row" style={{ marginTop: '0.75rem' }}>

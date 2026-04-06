@@ -32,6 +32,21 @@ export const CATEGORY_CHECKS = {
   accent: [
     { id: 'accent_det', label: 'Accent Detailing',     desc: 'Intricate carving/metalwork/glass intact',           optional: false },
   ],
+  appliance_stove: [
+    { id: 'burners', label: 'Burners', desc: 'All burners ignite and heat properly', optional: false },
+    { id: 'oven', label: 'Oven Elements', desc: 'Bake and broil elements heat, fan works', optional: false },
+    { id: 'stove_door', label: 'Oven Door', desc: 'Door aligns, seals properly, and hinges are smooth', optional: false },
+  ],
+  appliance_washer_dryer: [
+    { id: 'tub', label: 'Tub/Drum', desc: 'Spins freely, no abnormal noises', optional: false },
+    { id: 'belt', label: 'Belt/Motor', desc: 'Engages properly on cycle start', optional: false },
+    { id: 'connections', label: 'Connections', desc: 'Hoses/vents connected without leaks or blockages', optional: false },
+  ],
+  appliance_dishwasher: [
+    { id: 'dw_tub', label: 'Internal Tub', desc: 'Spray arms spin, racks roll smoothly', optional: false },
+    { id: 'dw_connections', label: 'Connections', desc: 'Water and drain lines secure, no leaks', optional: false },
+    { id: 'dw_door', label: 'Door & Latch', desc: 'Opens fully, latches securely', optional: false },
+  ],
 };
 
 // Helper: Get final dynamic checklist based on delivery items
@@ -186,7 +201,6 @@ export const getFollowUpType = (d, today) => {
   return null;
 };
 
-// Detect furniture category from item description for styling tips
 export const detectCategory = (description = '') => {
   const d = description.toLowerCase();
   if (d.includes('sectional')) return 'sectional';
@@ -194,5 +208,8 @@ export const detectCategory = (description = '') => {
   if (d.includes('dining') || d.includes('table') || d.includes('buffet') || d.includes('sideboard')) return 'dining';
   if (d.includes('bed') || d.includes('nightstand') || d.includes('dresser') || d.includes('mattress')) return 'bedroom';
   if (d.includes('chair') || d.includes('recliner') || d.includes('accent')) return 'accent';
+  if (d.includes('stove') || d.includes('range') || d.includes('oven')) return 'appliance_stove';
+  if (d.includes('washer') || d.includes('dryer')) return 'appliance_washer_dryer';
+  if (d.includes('dishwasher')) return 'appliance_dishwasher';
   return null;
 };
